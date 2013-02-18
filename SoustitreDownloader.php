@@ -21,18 +21,24 @@ class getFileSubtitle {
 	private $fileToCheck=array();
 	private $pathSearch;
 	private $pathMove;
+	private $createFolder=false;
 
 	public function __construct($argv) {
 		$this->pathSearch = (isset($argv[1]) ? $argv[1] : "");
 		$this->pathMove = (isset($argv[2]) ? $argv[2] : "");
+		if (isset($argv[3])) {
+			for($i=0;$i<strlen($argv[3]);$i++) {
+				if ($argv[3][$i]=="f") $this->createFolder=true;
+			}
+		}
 		$this->logicPath();
 		$this->findFile();
 		$this->findSubtitle();
 	}	
 	
 	public function logicPath() {
-		if (substr($this->pathSearch, -1)!="/") $this->pathSearch .= "/";
-		if (substr($this->pathMove, -1)!="/") $this->pathMove .= "/";
+		if ($this->pathSearch!="" && substr($this->pathSearch, -1)!="/") $this->pathSearch .= "/";
+		if ($this->pathMove!="" && substr($this->pathMove, -1)!="/") $this->pathMove .= "/";
 	}
 	
 	/**
@@ -61,12 +67,20 @@ class getFileSubtitle {
 	 * Déplace le fichier dans le dossier approprié : Série [ > Saison] > Episode
 	 */
 	public function relocateEpisode($data) {
-		if (!file_exists($this->pathMove.$data->serie)) mkdir($this->pathMove.$data->serie);
-		if (file_exists($this->pathMove.$data->serie."/Saison ".intval($data->saison))) $comp = "/Saison ".intval($data->saison);
-		elseif (file_exists($this->pathMove.$data->serie."/Season ".intval($data->saison))) $comp = "/Season ".intval($data->saison);
-		else $comp = "";
-		rename($this->pathSearch.$data->info["basename"], $this->pathMove.$data->serie.$comp."/".$data->info["basename"]);
-		rename($this->pathSearch.$data->info["filename"].".srt", $this->pathMove.$data->serie.$comp."/".$data->info["filename"].".srt");
+		$comp = "";
+		if (file_exists($this->pathMove.$data->serie)) {
+			$comp .= $data->serie;
+		}
+		elseif ($this->createFolder && !file_exists($this->pathMove.$data->serie)) {
+			mkdir($this->pathMove.$data->serie);
+			$comp .= $data->serie;
+		}
+		if ($comp!="") {
+			if (file_exists($this->pathMove.$data->serie."/Saison ".intval($data->saison))) $comp .= "/Saison ".intval($data->saison);
+			elseif (file_exists($this->pathMove.$data->serie."/Season ".intval($data->saison))) $comp .= "/Season ".intval($data->saison);
+		}
+		rename($this->pathSearch.$data->info["basename"], $this->pathMove.$comp."/".$data->info["basename"]);
+		rename($this->pathSearch.$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->info["filename"].".srt");
 	}
 	
 	/**
@@ -77,7 +91,9 @@ class getFileSubtitle {
 			foreach($this->fileToCheck as $f) {
 				$addicted = new addictedSubtitle($f);
 				if ($addicted->findEpisode()) {
-					$this->relocateEpisode($f);
+					if ($this->pathMove!="") {
+						$this->relocateEpisode($f);
+					}
 					echo "Un sous-titre a été trouvé\n";
 				}
 				else {
@@ -149,16 +165,21 @@ class sourceSubtitle {
 	}
 	
 	protected function getDataFromLink($link) {
-		$curl = curl_init(); 
-		curl_setopt($curl, CURLOPT_URL, $this->base.$link); 
-		//curl_setopt($curl, CURLOPT_HEADER, true);
-		curl_setopt($curl, CURLOPT_COOKIESESSION, true); 
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); 
-		if ($this->referer!="") curl_setopt($curl, CURLOPT_REFERER, $this->referer);
+		$cpt = 0;
+		$return = false;
+		while($return==false && $cpt<3) {
+			$curl = curl_init(); 
+			curl_setopt($curl, CURLOPT_URL, $this->base.$link); 
+			//curl_setopt($curl, CURLOPT_HEADER, true);
+			curl_setopt($curl, CURLOPT_COOKIESESSION, true); 
+			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); 
+			curl_setopt($curl, CURLOPT_TIMEOUT, 120); 
+			if ($this->referer!="") curl_setopt($curl, CURLOPT_REFERER, $this->referer);
 
-		$return = curl_exec($curl);
-		curl_close($curl); 
-		
+			$return = curl_exec($curl);
+			curl_close($curl); 
+			$cpt++;
+		}
 		$this->referer = $this->base.$link;
 		return $return;
 	}
@@ -183,8 +204,8 @@ class addictedSubtitle extends sourceSubtitle {
 	
 	public function findEpisode() {
 		$episodes = $this->getDataFromLink("search.php?search=".rawurlencode($this->search->getSimpleName())."&Submit=Search");
-		
-		preg_match("#<a href=\"([^\"]*)\"[^>]*>".$this->search->serie.".*".$this->search->saison."x".$this->search->episode.".*</a>#", $episodes, $result);
+				
+		preg_match("#<a href=\"([^\"]*)\"[^>]*>".$this->search->serie."[^<]*".$this->search->saison."x".$this->search->episode."[^<]*</a>#", $episodes, $result);
 
 		if (count($result)>0) {
 			return $this->findSubtitle($result[1]);
@@ -202,12 +223,12 @@ class addictedSubtitle extends sourceSubtitle {
 		$soustitres = $this->getDataFromLink($link);
 		preg_match_all("#\/updated\/8\/([0-9/]*)#", $soustitres, $resultLink);
 		$linkSubtitle="";
-		var_dump($resultLink[1]);
 		foreach($resultLink[1] as $l) {
 			$valid = true;
 			$resultVersion = array();
 			$dec = explode("/", $l);
-			preg_match_all("#Version([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,".$dec[1]."\)(.*Completed.*)\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
+			preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,".$dec[1]."\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
+			
 			if (count($resultVersion) > 0) {
 				preg_match("#([0-9]*\.?[0-9]*%? ?)Completed#", $resultVersion[0][2], $resultComplete);
 				if (isset($resultComplete[1]) && $resultComplete[1]=="") {
@@ -217,14 +238,13 @@ class addictedSubtitle extends sourceSubtitle {
 					$valid = false;
 				}
 				if ($this->search->version!="") {
-					if (strstr($resultVersion[0][1], $this->search->version)) {
+					if (strpos($resultVersion[0][1], $this->search->version)!==false) {
 						//$valid = true;
 					}
 					else {
 						$valid = false;
 					}
 				}
-					
 			}
 			if ($valid) {
 				$linkSubtitle = "updated/8/".$l;
