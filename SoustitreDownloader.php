@@ -134,10 +134,18 @@ class fileData {
 				$this->serie = trim(str_replace(".", " ", $result2[1]));
 			}
 		}
-		else if (preg_match("#([0-9]{2})x([0-9]{2})#", $file, $result)) {
+		else if (preg_match("#([0-9]{1,2})x([0-9]{2})#", $file, $result)) {
 			$this->saison = $result[1];
 			$this->episode = $result[2];
 			if (preg_match("#(.*)".$this->saison."x".$this->episode."#", $file, $result2)) {
+				$this->serie = trim(str_replace(".", " ", $result2[1]));
+			}
+		}
+		else if (preg_match_all("#[. ]([0-9])([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)) {
+			$result = end($result);
+			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
+			$this->episode = $result[2];
+			if (preg_match("#(.*)".$result[1].$this->episode."#", $file, $result2)) {
 				$this->serie = trim(str_replace(".", " ", $result2[1]));
 			}
 		}
