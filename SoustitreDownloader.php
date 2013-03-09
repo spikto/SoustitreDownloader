@@ -47,16 +47,34 @@ class getFileSubtitle {
 	public function findFile() {
 		$path = $this->pathSearch;
 		if ($path!="") {
-			$list = glob($path."*");
+			$list = glob_perso($path);
 			foreach($list as $l) {
 				$info = pathinfo($l);
-				if (is_file($l) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#", $info["filename"])) {
+				if (is_file($l) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"])) {
 					if (!file_exists($path.$info["filename"].".srt")) {
 						$this->fileToCheck[] = new fileData($info);
 					}
 					else if ($this->pathMove!="") {
 						$data = new fileData($info);
 						$this->relocateEpisode($data);
+					}
+				}
+				else if (is_dir($l)) {
+					$data = new fileData($info);
+					if ($data->isValid()) {
+						$sublist = glob_perso($l."/");
+						 foreach($sublist as $sl) {
+							$info = pathinfo($sl);
+							if (is_file($sl) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"])) {
+								rename($sl, $path.$info["basename"]);
+								$info = pathinfo($path.$info["basename"]);
+								$this->fileToCheck[] = new fileData($info);
+							}
+							elseif (is_file($sl)) {
+								unlink($sl);
+							}
+						}
+						rmdir($l."/");
 					}
 				}
 			}
@@ -122,23 +140,24 @@ class fileData {
 		$this->info = $info;
 		$this->readName();
 	}
+
 	
 	public function readName() {
 		$file = $this->info["filename"];
 		//preg_match("#([^0-9]+)([0-9]{2})E([0-9]{2})#", $file, $result2);
 
-		if (preg_match("#S([0-9]{2})E([0-9]{2})#", $file, $result)) {
+		if (preg_match("#S([0-9]{2})E([0-9]{2})#msui", $file, $result)) {
 			$this->saison = $result[1];
 			$this->episode = $result[2];
-			if (preg_match("#(.*)S".$this->saison."E".$this->episode."#", $file, $result2)) {
-				$this->serie = trim(str_replace(".", " ", $result2[1]));
+			if (preg_match("#(.*)S".$this->saison."E".$this->episode."#msui", $file, $result2)) {
+				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
 			}
 		}
 		else if (preg_match("#([0-9]{1,2})x([0-9]{2})#", $file, $result)) {
 			$this->saison = $result[1];
 			$this->episode = $result[2];
 			if (preg_match("#(.*)".$this->saison."x".$this->episode."#", $file, $result2)) {
-				$this->serie = trim(str_replace(".", " ", $result2[1]));
+				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
 			}
 		}
 		else if (preg_match_all("#[. ]([0-9])([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)) {
@@ -146,11 +165,11 @@ class fileData {
 			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
 			$this->episode = $result[2];
 			if (preg_match("#(.*)".$result[1].$this->episode."#", $file, $result2)) {
-				$this->serie = trim(str_replace(".", " ", $result2[1]));
+				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
 			}
 		}
-
-		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE)#", $file, $result3);
+		echo $this->getSimpleName();
+		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE)#msui", $file, $result3);
 		$this->version = (isset($result3[1]) ? $result3[1] : "");
 	}
 	
@@ -158,6 +177,9 @@ class fileData {
 		return $this->serie." ".$this->saison."x".$this->episode;
 	}
 	
+	public function isValid() {
+		return ($this->serie!="" && $this->saison!="" && $this->episode);
+	}
 }
 
 /**
@@ -276,4 +298,20 @@ class addictedSubtitle extends sourceSubtitle {
 	}
 	
 	
+}
+
+function glob_perso($path) {
+	$list = array();
+	if (file_exists($path)) {
+		$handle = opendir($path);
+		if ($handle) {
+			while (false !== ($entry = readdir($handle))) {
+				if ($entry != "." && $entry != "..") {
+					$list[] = $path.$entry;
+				}
+			}
+			closedir($handle);
+		}
+	}
+	return $list;
 }
