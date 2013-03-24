@@ -22,6 +22,7 @@ class getFileSubtitle {
 	private $pathSearch;
 	private $pathMove;
 	private $createFolder=false;
+	private $forceDownload=false;
 
 	public function __construct($argv) {
 		$this->pathSearch = (isset($argv[1]) ? $argv[1] : "");
@@ -29,6 +30,7 @@ class getFileSubtitle {
 		if (isset($argv[3])) {
 			for($i=0;$i<strlen($argv[3]);$i++) {
 				if ($argv[3][$i]=="f") $this->createFolder=true;
+				if ($argv[3][$i]=="d") $this->forceDownload=true;
 			}
 		}
 		$this->logicPath();
@@ -107,7 +109,7 @@ class getFileSubtitle {
 	public function findSubtitle() {
 		if (count($this->fileToCheck)>0) {
 			foreach($this->fileToCheck as $f) {
-				$addicted = new addictedSubtitle($f);
+				$addicted = new addictedSubtitle($f, $this->forceDownload);
 				if ($addicted->findEpisode()) {
 					if ($this->pathMove!="") {
 						$this->relocateEpisode($f);
@@ -168,7 +170,6 @@ class fileData {
 				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
 			}
 		}
-		echo $this->getSimpleName();
 		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE)#msui", $file, $result3);
 		$this->version = (isset($result3[1]) ? $result3[1] : "");
 	}
@@ -189,9 +190,11 @@ class sourceSubtitle {
 	public $base;
 	public $referer;
 	public $search;
+	public $forceExistant;
 
-	public function __construct($search) {
+	public function __construct($search, $force = false) {
 		$this->search = $search;
+		$this->forceExistant = $force;
 	}
 	
 	protected function getDataFromLink($link) {
@@ -253,33 +256,43 @@ class addictedSubtitle extends sourceSubtitle {
 		$soustitres = $this->getDataFromLink($link);
 		preg_match_all("#\/updated\/8\/([0-9/]*)#", $soustitres, $resultLink);
 		$linkSubtitle="";
+		$completedLink = array();
 		foreach($resultLink[1] as $l) {
 			$valid = true;
 			$resultVersion = array();
 			$dec = explode("/", $l);
-			preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,".$dec[1]."\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
-			
+			preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,0\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
+			if (count($resultVersion) == 0) {
+				preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,0\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
+			}
 			if (count($resultVersion) > 0) {
 				preg_match("#([0-9]*\.?[0-9]*%? ?)Completed#", $resultVersion[0][2], $resultComplete);
 				if (isset($resultComplete[1]) && $resultComplete[1]=="") {
-					//$valid = true;
+					$completedLink[] = "updated/8/".$l;
 				}
 				else {
 					$valid = false;
 				}
 				if ($this->search->version!="") {
 					if (strpos($resultVersion[0][1], $this->search->version)!==false) {
-						//$valid = true;
+						$completedLink[] = "updated/8/".$l;
 					}
 					else {
 						$valid = false;
 					}
 				}
 			}
+			else {
+				$valid = false;
+			}
+			
 			if ($valid) {
 				$linkSubtitle = "updated/8/".$l;
 				break;
 			}
+		}
+		if ($this->forceExistant && !empty($completedLink) && $linkSubtitle=="") {
+			$linkSubtitle = $completedLink[0];
 		}
 		if ($linkSubtitle!="") {
 			return $this->saveSubtitle($linkSubtitle);

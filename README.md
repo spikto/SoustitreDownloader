@@ -16,3 +16,4 @@ Comment ça marche ?
 **arg3** Option supplémentaire 
 	
 	f : Création du dossier de la série s'il n'existe pas
+	d : Force le téléchargement d'un sous-titre d'une version différente
