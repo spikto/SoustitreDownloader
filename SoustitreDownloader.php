@@ -170,7 +170,7 @@ class fileData {
 				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
 			}
 		}
-		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE)#msui", $file, $result3);
+		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE|IMMERSE|2HD|KILLERS)#msui", $file, $result3);
 		$this->version = (isset($result3[1]) ? $result3[1] : "");
 	}
 	
@@ -261,9 +261,12 @@ class addictedSubtitle extends sourceSubtitle {
 			$valid = true;
 			$resultVersion = array();
 			$dec = explode("/", $l);
-			preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,0\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
+			preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
 			if (count($resultVersion) == 0) {
-				preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,0\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
+				preg_match_all("#Version [^<]*.*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*Works with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
+			}
+			if (count($resultVersion) == 0) {
+				preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
 			}
 			if (count($resultVersion) > 0) {
 				preg_match("#([0-9]*\.?[0-9]*%? ?)Completed#", $resultVersion[0][2], $resultComplete);
@@ -291,7 +294,7 @@ class addictedSubtitle extends sourceSubtitle {
 				break;
 			}
 		}
-		if ($this->forceExistant && !empty($completedLink) && $linkSubtitle=="") {
+		if ($this->forceExistant && $linkSubtitle=="" && !empty($completedLink)) {
 			$linkSubtitle = $completedLink[0];
 		}
 		if ($linkSubtitle!="") {
