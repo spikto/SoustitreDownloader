@@ -9,6 +9,7 @@
  * @copyright     Copyright 2013, Spikto, Thomas Buée
  */
  
+//ini_set("display_errors", "1");
 set_time_limit(0);
 
 $app = new getFileSubtitle($argv);
@@ -171,7 +172,7 @@ class fileData {
 			}
 		}
 		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE|IMMERSE|2HD|KILLERS)#msui", $file, $result3);
-		$this->version = (isset($result3[1]) ? $result3[1] : "");
+		$this->version = strtoupper(isset($result3[1]) ? $result3[1] : "");
 	}
 	
 	public function getSimpleName() {
@@ -254,44 +255,47 @@ class addictedSubtitle extends sourceSubtitle {
 
 	public function findSubtitle($link) {
 		$soustitres = $this->getDataFromLink($link);
-		preg_match_all("#\/updated\/8\/([0-9/]*)#", $soustitres, $resultLink);
+		$blocs = explode("<div id=\"container95m\">", $soustitres);
 		$linkSubtitle="";
 		$completedLink = array();
-		foreach($resultLink[1] as $l) {
-			$valid = true;
-			$resultVersion = array();
-			$dec = explode("/", $l);
-			preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
-			if (count($resultVersion) == 0) {
-				preg_match_all("#Version [^<]*.*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*Works with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
-			}
-			if (count($resultVersion) == 0) {
-				preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1].".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msu", $soustitres, $resultVersion, PREG_SET_ORDER);
-			}
-			if (count($resultVersion) > 0) {
-				preg_match("#([0-9]*\.?[0-9]*%? ?)Completed#", $resultVersion[0][2], $resultComplete);
-				if (isset($resultComplete[1]) && $resultComplete[1]=="") {
-					$completedLink[] = "updated/8/".$l;
+		foreach ($blocs as $b) {
+			preg_match_all("#\/updated\/8\/([0-9/]*)#", $b, $resultLink);
+			foreach($resultLink[1] as $l) {
+				$valid = true;
+				$resultVersion = array();
+				$dec = explode("/", $l);
+				preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msu", $b, $resultVersion, PREG_SET_ORDER);
+				if (count($resultVersion) == 0) {
+					preg_match_all("#Version [^<]*.*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*Works with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msu", $b, $resultVersion, PREG_SET_ORDER);
 				}
-				else {
-					$valid = false;
+				if (count($resultVersion) == 0) {
+					preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msu", $b, $resultVersion, PREG_SET_ORDER);
 				}
-				if ($this->search->version!="") {
-					if (strpos($resultVersion[0][1], $this->search->version)!==false) {
+				if (count($resultVersion) > 0) {
+					preg_match("#([0-9]*\.?[0-9]*%? ?)Completed#", $resultVersion[0][2], $resultComplete);
+					if (isset($resultComplete[1]) && $resultComplete[1]=="") {
 						$completedLink[] = "updated/8/".$l;
 					}
 					else {
 						$valid = false;
 					}
+					if ($this->search->version!="") {
+						if (strpos($resultVersion[0][1], $this->search->version)!==false) {
+							$completedLink[] = "updated/8/".$l;
+						}
+						else {
+							$valid = false;
+						}
+					}
 				}
-			}
-			else {
-				$valid = false;
-			}
-			
-			if ($valid) {
-				$linkSubtitle = "updated/8/".$l;
-				break;
+				else {
+					$valid = false;
+				}
+				
+				if ($valid) {
+					$linkSubtitle = "updated/8/".$l;
+					break;
+				}
 			}
 		}
 		if ($this->forceExistant && $linkSubtitle=="" && !empty($completedLink)) {
