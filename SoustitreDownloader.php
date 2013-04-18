@@ -259,21 +259,20 @@ class addictedSubtitle extends sourceSubtitle {
 		$linkSubtitle="";
 		$completedLink = array();
 		foreach ($blocs as $b) {
+			$valid = true;
 			preg_match_all("#\/updated\/8\/([0-9/]*)#", $b, $resultLink);
 			foreach($resultLink[1] as $l) {
-				$valid = true;
 				$resultVersion = array();
 				$dec = explode("/", $l);
-				preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msu", $b, $resultVersion, PREG_SET_ORDER);
+				preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				if (count($resultVersion) == 0) {
-					preg_match_all("#Version [^<]*.*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*Works with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msu", $b, $resultVersion, PREG_SET_ORDER);
+					preg_match_all("#Version [^<]*.*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*Works with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				}
 				if (count($resultVersion) == 0) {
-					preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msu", $b, $resultVersion, PREG_SET_ORDER);
+					preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				}
 				if (count($resultVersion) > 0) {
-					preg_match("#([0-9]*\.?[0-9]*%? ?)Completed#", $resultVersion[0][2], $resultComplete);
-					if (isset($resultComplete[1]) && $resultComplete[1]=="") {
+					if (!preg_match("#saveFavorite\(".$dec[0].",8,[0-9]*\).*[0-9]*\.[0-9]*% Completed.*\/updated\/8\/(".$dec[0]."\/".$dec[1].")#msui", $b)) {
 						$completedLink[] = "updated/8/".$l;
 					}
 					else {
@@ -297,6 +296,7 @@ class addictedSubtitle extends sourceSubtitle {
 					break;
 				}
 			}
+			if ($valid && $linkSubtitle!="") break;
 		}
 		if ($this->forceExistant && $linkSubtitle=="" && !empty($completedLink)) {
 			$linkSubtitle = $completedLink[0];
@@ -320,14 +320,35 @@ class addictedSubtitle extends sourceSubtitle {
 	
 }
 
-function glob_perso($path) {
+function glob_perso($path, $folder=array()) {
+	$globalPath;
 	$list = array();
-	if (file_exists($path)) {
-		$handle = opendir($path);
+	if (!empty($folder)) {
+		if (!is_array($folder)) $folder = array($folder);
+		foreach ($folder as $value) {
+			if (file_exists($path.$value)) {
+				$path = $path.$value;
+			}
+			else {
+				$handle = opendir($path);
+				if ($handle) {
+					while (false !== ($entry = readdir($handle))) {
+						if (strtolower($entry)==strtolower($value)) {
+							$path = $path.$entry."/";
+						}
+					}
+					closedir($handle);
+				}
+			}
+		}
+	}
+	$globalPath = $path;
+	if (file_exists($globalPath)) {
+		$handle = opendir($globalPath);
 		if ($handle) {
 			while (false !== ($entry = readdir($handle))) {
 				if ($entry != "." && $entry != "..") {
-					$list[] = $path.$entry;
+					$list[] = $globalPath.$entry;
 				}
 			}
 			closedir($handle);
