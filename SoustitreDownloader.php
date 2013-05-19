@@ -22,16 +22,24 @@ class getFileSubtitle {
 	private $fileToCheck=array();
 	private $pathSearch;
 	private $pathMove;
+	private $emailSend;
+	private $emailSerie;
 	private $createFolder=false;
+	private $cleanName=false;
 	private $forceDownload=false;
+	private $recursive=false;
 
 	public function __construct($argv) {
 		$this->pathSearch = (isset($argv[1]) ? $argv[1] : "");
 		$this->pathMove = (isset($argv[2]) ? $argv[2] : "");
+		$this->emailSend = (isset($argv[4]) ? $argv[4] : "");
+		$this->emailSerie = (isset($argv[5]) ? $argv[5] : "");
 		if (isset($argv[3])) {
 			for($i=0;$i<strlen($argv[3]);$i++) {
 				if ($argv[3][$i]=="f") $this->createFolder=true;
 				if ($argv[3][$i]=="d") $this->forceDownload=true;
+				if ($argv[3][$i]=="c") $this->cleanName=true;
+				if ($argv[3][$i]=="r") $this->recursive=true;
 			}
 		}
 		$this->logicPath();
@@ -50,7 +58,7 @@ class getFileSubtitle {
 	public function findFile() {
 		$path = $this->pathSearch;
 		if ($path!="") {
-			$list = glob_perso($path);
+			$list = glob_perso($path, array(), $this->recursive);
 			foreach($list as $l) {
 				$info = pathinfo($l);
 				if (is_file($l) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"])) {
@@ -62,7 +70,7 @@ class getFileSubtitle {
 						$this->relocateEpisode($data);
 					}
 				}
-				else if (is_dir($l)) {
+				/*else if (is_dir($l)) {
 					$data = new fileData($info);
 					if ($data->isValid()) {
 						$sublist = glob_perso($l."/");
@@ -79,7 +87,7 @@ class getFileSubtitle {
 						}
 						rmdir($l."/");
 					}
-				}
+				}*/
 			}
 		}
 	}	
@@ -102,6 +110,10 @@ class getFileSubtitle {
 		}
 		rename($this->pathSearch.$data->info["basename"], $this->pathMove.$comp."/".$data->info["basename"]);
 		rename($this->pathSearch.$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->info["filename"].".srt");
+		if ($this->cleanName) {
+			rename($this->pathMove.$comp."/".$data->info["basename"], $this->pathMove.$comp."/".$data->getSimpleName(3).".".$data->info["extension"]);
+			rename($this->pathMove.$comp."/".$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->getSimpleName(3).".srt");
+		}
 	}
 	
 	/**
@@ -112,6 +124,9 @@ class getFileSubtitle {
 			foreach($this->fileToCheck as $f) {
 				$addicted = new addictedSubtitle($f, $this->forceDownload);
 				if ($addicted->findEpisode()) {
+					if ($this->emailSend!="" && (($this->emailSerie!="" && strtolower($f->serie)==strtolower($this->emailSerie)) || $this->emailSerie=="")) {
+						sendEmail($this->emailSend, $f->getSimpleName(1), $f->info["filename"], $this->pathSearch);
+					}
 					if ($this->pathMove!="") {
 						$this->relocateEpisode($f);
 					}
@@ -175,8 +190,19 @@ class fileData {
 		$this->version = strtoupper(isset($result3[1]) ? $result3[1] : "");
 	}
 	
-	public function getSimpleName() {
-		return $this->serie." ".$this->saison."x".$this->episode;
+	public function getSimpleName($type=0) {
+		if ($type==0) {
+			return $this->serie." ".$this->saison."x".$this->episode;
+		}
+		else if ($type==1) {
+			return $this->serie." S".$this->saison."E".$this->episode;
+		}
+		else if ($type==2) {
+			return $this->serie." ".$this->saison.$this->episode;
+		}
+		else if ($type==3) {
+			return $this->serie." S".$this->saison." E".$this->episode;
+		}
 	}
 	
 	public function isValid() {
@@ -269,6 +295,9 @@ class addictedSubtitle extends sourceSubtitle {
 					preg_match_all("#Version [^<]*.*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*Works with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				}
 				if (count($resultVersion) == 0) {
+					preg_match_all("#Version [^<]*.*movie_faq.png\" title=".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+				}
+				if (count($resultVersion) == 0) {
 					preg_match_all("#Version ([^<]*).*starttranslation.php\?id=".$dec[0]."&amp;fversion=".$dec[1]."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/updated\/8\/(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				}
 				if (count($resultVersion) > 0) {
@@ -320,14 +349,51 @@ class addictedSubtitle extends sourceSubtitle {
 	
 }
 
-function glob_perso($path, $folder=array()) {
+function sendEmail($to, $subject, $file, $path) {
+	$random_hash = md5(date('r')); 
+	$headers = "From: script@gmail.com\r\nReply-To: script@gmail.com";
+	$headers .= "\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"PHP-mixed-".$random_hash."\""; 
+	$attachment = chunk_split(base64_encode(file_get_contents($path.$file.".srt"))); 
+	$message = "
+--PHP-mixed-".$random_hash."
+Content-Type: multipart/alternative; boundary=\"PHP-alt-".$random_hash."\"
+
+--PHP-alt-".$random_hash."
+Content-Type: text/plain; charset=\"utf-8\"
+Content-Transfer-Encoding: 7bit
+
+Nouveau fichier !!
+
+--PHP-alt-".$random_hash."
+Content-Type: text/html; charset=\"utf-8\" 
+Content-Transfer-Encoding: 7bit
+
+<h2>Nouveau fichier !!</h2>
+
+--PHP-alt-".$random_hash."--
+
+--PHP-mixed-".$random_hash."
+Content-Type: application/octet-stream; name=\"".$file.".srt\"
+Content-Transfer-Encoding: base64  
+Content-Disposition: attachment  
+
+".$attachment."
+--PHP-mixed-".$random_hash."-- 
+
+";
+	ob_clean();
+	return @mail($to, $subject, $message, $headers);
+}
+
+
+function glob_perso($path, $folder=array(), $recursive=false) {
 	$globalPath;
 	$list = array();
 	if (!empty($folder)) {
 		if (!is_array($folder)) $folder = array($folder);
 		foreach ($folder as $value) {
 			if (file_exists($path.$value)) {
-				$path = $path.$value;
+				$path = $path.$value."/";
 			}
 			else {
 				$handle = opendir($path);
@@ -342,13 +408,20 @@ function glob_perso($path, $folder=array()) {
 			}
 		}
 	}
-	$globalPath = $path;
-	if (file_exists($globalPath)) {
-		$handle = opendir($globalPath);
+	$list = glob_recursive($path, $recursive);
+	return $list;
+}
+
+function glob_recursive($path, $recursive=false) {
+	$list = array();
+	if (file_exists($path)) {
+		$path = substr($path, -1)!="/" ? $path."/" : $path;
+		$handle = opendir($path);
 		if ($handle) {
 			while (false !== ($entry = readdir($handle))) {
 				if ($entry != "." && $entry != "..") {
-					$list[] = $globalPath.$entry;
+					$list[] = $path.$entry;
+					if ($recursive && is_dir($path.$entry)) $list = array_merge($list, glob_recursive($path.$entry."/", $recursive));
 				}
 			}
 			closedir($handle);
