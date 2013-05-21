@@ -40,11 +40,17 @@ class getFileSubtitle {
 				if ($argv[3][$i]=="d") $this->forceDownload=true;
 				if ($argv[3][$i]=="c") $this->cleanName=true;
 				if ($argv[3][$i]=="r") $this->recursive=true;
+				if ($argv[3][$i]=="u") $this->updateScript();
 			}
 		}
 		$this->logicPath();
 		$this->findFile();
 		$this->findSubtitle();
+	}	
+	
+	public function updateScript() {
+		exec("git reset --hard HEAD");
+		exec("git pull origin master");
 	}	
 	
 	public function logicPath() {
@@ -70,7 +76,7 @@ class getFileSubtitle {
 						$this->relocateEpisode($data);
 					}
 				}
-				/*else if (is_dir($l)) {
+				else if (is_dir($l)) {
 					$data = new fileData($info);
 					if ($data->isValid()) {
 						$sublist = glob_perso($l."/");
@@ -87,7 +93,7 @@ class getFileSubtitle {
 						}
 						rmdir($l."/");
 					}
-				}*/
+				}
 			}
 		}
 	}	
