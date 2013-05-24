@@ -68,7 +68,7 @@ class getFileSubtitle {
 			foreach($list as $l) {
 				$info = pathinfo($l);
 				if (is_file($l) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"])) {
-					if (!file_exists($path.$info["filename"].".srt")) {
+					if (!file_exists($info["dirname"]."/".$info["filename"].".srt")) {
 						$this->fileToCheck[] = new fileData($info);
 					}
 					else if ($this->pathMove!="") {
