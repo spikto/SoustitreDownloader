@@ -136,10 +136,10 @@ class getFileSubtitle {
 					if ($this->pathMove!="") {
 						$this->relocateEpisode($f);
 					}
-					echo "Un sous-titre a été trouvé\n";
+					echo $f->serie." : Un sous-titre a été trouvé\n";
 				}
 				else {
-					echo "Aucun sous-titre trouvé\n";
+					echo $f->serie." : Aucun sous-titre trouvé\n";
 				}
 			}
 		}
@@ -304,8 +304,6 @@ class addictedSubtitle extends sourceSubtitle {
 			foreach($resultLink[1] as $l) {
 				$resultVersion = array();
 				$dec = explode("/", $l);
-				var_dump($l);
-				//echo $b;
 				preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				if (count($resultVersion) == 0) {
 					preg_match_all("#Version [^<]*.*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*Sould work with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
