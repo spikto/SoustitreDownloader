@@ -270,7 +270,6 @@ class addictedSubtitle extends sourceSubtitle {
 	
 	public function findEpisode() {
 		$episodes = $this->getDataFromLink("search.php?search=".rawurlencode($this->search->getSimpleName())."&Submit=Search");
-				
 		preg_match("#<a href=\"([^\"]*)\"[^>]*>".$this->search->serie."[^<]*".$this->search->saison."x".$this->search->episode."[^<]*</a>#", $episodes, $result);
 
 		if (count($result)>0) {
@@ -309,10 +308,10 @@ class addictedSubtitle extends sourceSubtitle {
 				//echo $b;
 				preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				if (count($resultVersion) == 0) {
-					preg_match_all("#Version [^<]*.*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*Works with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+					preg_match_all("#Version [^<]*.*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*Sould work with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				}
 				if (count($resultVersion) == 0) {
-					preg_match_all("#Version [^<]*.*movie_faq.png\" title=".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+					preg_match_all("#Version [^<]*.*movie_faq.png\" title=\"".($this->search->version!="" ? "[^\"]*(".$this->search->version.")[^\"]*" : "[^\"]*").".*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				}
 				if (count($resultVersion) == 0) {
 					preg_match_all("#Version ([^<]*).*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
