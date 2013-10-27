@@ -136,10 +136,10 @@ class getFileSubtitle {
 					if ($this->pathMove!="") {
 						$this->relocateEpisode($f);
 					}
-					echo $f->serie." : Un sous-titre a été trouvé\n";
+					echo $f->getSimpleName(1)." : Un sous-titre a été trouvé\n";
 				}
 				else {
-					echo $f->serie." : Aucun sous-titre trouvé\n";
+					echo $f->getSimpleName(1)." : Aucun sous-titre trouvé\n";
 				}
 			}
 		}
