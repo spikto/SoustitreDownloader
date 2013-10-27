@@ -304,15 +304,22 @@ class addictedSubtitle extends sourceSubtitle {
 			foreach($resultLink[1] as $l) {
 				$resultVersion = array();
 				$dec = explode("/", $l);
-				preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
-				if (count($resultVersion) == 0) {
-					preg_match_all("#Version [^<]*.*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*Sould work with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+				$stopCpt = 0;
+				$pathTranslate = "/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*";
+				while(count($resultVersion) == 0 && $stopCpt<2) {
+					if ($stopCpt==1) $pathTranslate = "/index.php";
+					preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*".$pathTranslate."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+					if (count($resultVersion) == 0) {
+						preg_match_all("#Version [^<]*.*".$pathTranslate."\".*Should work with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+					}
+					if (count($resultVersion) == 0) {
+						preg_match_all("#Version [^<]*.*movie_faq.png\" title=\"".($this->search->version!="" ? "[^\"]*(".$this->search->version.")[^\"]*" : "[^\"]*").".".$pathTranslate."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+					}
+					
+					$stopCpt++;
 				}
 				if (count($resultVersion) == 0) {
-					preg_match_all("#Version [^<]*.*movie_faq.png\" title=\"".($this->search->version!="" ? "[^\"]*(".$this->search->version.")[^\"]*" : "[^\"]*").".*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
-				}
-				if (count($resultVersion) == 0) {
-					preg_match_all("#Version ([^<]*).*/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+					preg_match_all("#Version ([^<]*).*".$pathTranslate."[^\"]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
 				}
 				if (count($resultVersion) > 0) {
 					if (!preg_match("#saveFavorite\(".$dec[0].",8,[0-9]*\).*[0-9]*\.[0-9]*% Completed.*\/".$mod."(".$dec[0]."\/".$dec[1].")#msui", $b)) {
