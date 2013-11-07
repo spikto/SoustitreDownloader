@@ -174,14 +174,14 @@ class fileData {
 			$this->saison = $result[1];
 			$this->episode = $result[2];
 			if (preg_match("#(.*)S".$this->saison."E".$this->episode."#msui", $file, $result2)) {
-				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
+				$this->serie = $this->cleanSerie($result2[1]);
 			}
 		}
 		else if (preg_match("#([0-9]{1,2})x([0-9]{2})#", $file, $result)) {
 			$this->saison = $result[1];
 			$this->episode = $result[2];
 			if (preg_match("#(.*)".$this->saison."x".$this->episode."#", $file, $result2)) {
-				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
+				$this->serie = $this->cleanSerie($result2[1]);
 			}
 		}
 		else if (preg_match_all("#[. ]([0-9])([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)) {
@@ -189,13 +189,26 @@ class fileData {
 			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
 			$this->episode = $result[2];
 			if (preg_match("#(.*)".$result[1].$this->episode."#", $file, $result2)) {
-				$this->serie = ucwords(trim(str_replace(".", " ", $result2[1])));
+				$this->serie = $this->cleanSerie($result2[1]);
 			}
 		}
 		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE|IMMERSE|2HD|KILLERS)#msui", $file, $result3);
 		$this->version = strtoupper(isset($result3[1]) ? $result3[1] : "");
 	}
 	
+	public function cleanSerie($serie) {
+		$tabReplace = array(
+			"S.H.I.E.L.D." => "SHIELD",
+			"S.H.I.E.L.D" => "SHIELD",
+			"." => " "
+		);
+		foreach($tabReplace as $b => $f) {
+			$serie = str_replace($b, $f, $serie);
+		}
+		$serie = ucwords(trim($serie));
+		return $serie;
+	}
+
 	public function getSimpleName($type=0) {
 		if ($type==0) {
 			return $this->serie." ".$this->saison."x".$this->episode;
@@ -239,7 +252,8 @@ class sourceSubtitle {
 			//curl_setopt($curl, CURLOPT_HEADER, true);
 			curl_setopt($curl, CURLOPT_COOKIESESSION, true); 
 			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); 
-			curl_setopt($curl, CURLOPT_TIMEOUT, 120); 
+			curl_setopt($curl, CURLOPT_TIMEOUT, 240); 
+			curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 240); 
 			if ($this->referer!="") curl_setopt($curl, CURLOPT_REFERER, $this->referer);
 
 			$return = curl_exec($curl);
@@ -281,7 +295,7 @@ class addictedSubtitle extends sourceSubtitle {
 			preg_match("#<a href=\"([^\"]*)\".*>.*".$this->search->saison."x".$this->search->episode.".*</a>#", $episodes, $result);
 			if (count($result)>0) {
 				$dec = explode("/", $result[1]);
-				$dec[count($dec)-1]="false";
+				$dec[count($dec)-1]="8";
 				return $this->findSubtitle(implode("/", $dec));
 			}
 		}
@@ -291,6 +305,7 @@ class addictedSubtitle extends sourceSubtitle {
 	public function findSubtitle($link) {
 		$soustitres = $this->getDataFromLink($link);
 		$blocs = explode("<div id=\"container95m\">", $soustitres);
+		if (count($blocs)>1) unset($blocs[0]);
 		$linkSubtitle="";
 		$completedLink = array();
 		foreach ($blocs as $b) {
@@ -304,43 +319,26 @@ class addictedSubtitle extends sourceSubtitle {
 			foreach($resultLink[1] as $l) {
 				$resultVersion = array();
 				$dec = explode("/", $l);
-				$stopCpt = 0;
-				$pathTranslate = "/index.php\?id=".$dec[0]."&amp;fversion=[0-9]*&amp;lang=[0-9]*";
-				while(count($resultVersion) == 0 && $stopCpt<2) {
-					if ($stopCpt==1) $pathTranslate = "/index.php";
-					preg_match_all("#Version ".($this->search->version!="" ? "(".$this->search->version.")" : "([^<]*)").".*".$pathTranslate."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
-					if (count($resultVersion) == 0) {
-						preg_match_all("#Version [^<]*.*".$pathTranslate."\".*Should work with ".($this->search->version!="" ? "[^<]*(".$this->search->version.")[^<]*" : "[^<]*").".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
-					}
-					if (count($resultVersion) == 0) {
-						preg_match_all("#Version [^<]*.*movie_faq.png\" title=\"".($this->search->version!="" ? "[^\"]*(".$this->search->version.")[^\"]*" : "[^\"]*").".".$pathTranslate."\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
-					}
-					
-					$stopCpt++;
+				preg_match_all("#saveFavorite\(".$dec[0].",8,[0-9]*\)(.*)\/".$mod.$dec[0]."\/".$dec[1]."\"#msui", $b, $resultComplet);
+				if (!preg_match("#([0-9]*\.[0-9]*% Completed)#msui", $resultComplet[1][0])) {
+					$completedLink[] = str_replace("\/", "/",$mod).$l;
 				}
-				if (count($resultVersion) == 0) {
-					preg_match_all("#Version ([^<]*).*".$pathTranslate."[^\"]*\".*saveFavorite\(".$dec[0].",8,[0-9]*\).*([0-9]{0,2}\.?[0-9]{0,2}%? ?Completed).*\/".$mod."(".$dec[0]."\/".$dec[1].")\"#msui", $b, $resultVersion, PREG_SET_ORDER);
+				else {
+					$valid = false;
 				}
-				if (count($resultVersion) > 0) {
-					if (!preg_match("#saveFavorite\(".$dec[0].",8,[0-9]*\).*[0-9]*\.[0-9]*% Completed.*\/".$mod."(".$dec[0]."\/".$dec[1].")#msui", $b)) {
+
+				if ($this->search->version!="") {
+					if ((preg_match_all("#/>Version ([^<]*)#msui", $b, $resultV) && strpos($resultV[1][0], $this->search->version)!==false) || 
+						(preg_match_all("#<img src=\"/images/movie_faq.png\" title=\"([^\"]*)#msui", $b, $resultV2) && strpos($resultV2[1][0], $this->search->version)!==false) || 
+						(preg_match_all("#class=\"newsDate\" colspan=\"3\">([^<]*)#msui", $b, $resultV3) && strpos($resultV3[1][0], $this->search->version)!==false)
+						) {
 						$completedLink[] = str_replace("\/", "/",$mod).$l;
 					}
 					else {
 						$valid = false;
 					}
-					if ($this->search->version!="") {
-						if (strpos($resultVersion[0][1], $this->search->version)!==false) {
-							$completedLink[] = str_replace("\/", "/",$mod).$l;
-						}
-						else {
-							$valid = false;
-						}
-					}
 				}
-				else {
-					$valid = false;
-				}
-				
+
 				if ($valid) {
 					$linkSubtitle = str_replace("\/", "/",$mod).$l;
 					break;
