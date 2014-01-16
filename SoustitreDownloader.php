@@ -2,11 +2,11 @@
 /**
  * SoustitreDownlaoder
  *
- * Ce script PHP permet de tÈlÈcharger des sous-titres automatiques ‡ partir du site addic7ed.com
+ * Ce script PHP permet de t√©l√©charger des sous-titres automatiques √† partir du site addic7ed.com
  *
  * PHP 5
  *
- * @copyright     Copyright 2013, Spikto, Thomas BuÈe
+ * @copyright     Copyright 2013, Spikto, Thomas Bu√©e
  */
  
 //ini_set("display_errors", "1");
@@ -15,7 +15,7 @@ set_time_limit(0);
 $app = new getFileSubtitle($argv);
 
 /**
- * Gestion des sous-titres ‡ tÈlÈcharger
+ * Gestion des sous-titres √† t√©l√©charger
  */
 class getFileSubtitle {
 	private $extFile = array("mp4","mkv","m4v","avi","mov","wmv","mpg");
@@ -59,7 +59,7 @@ class getFileSubtitle {
 	}
 	
 	/**
-	 * Recherche des sous-titres ‡ tÈlÈcharger
+	 * Recherche des sous-titres √† t√©l√©charger
 	 */
 	public function findFile() {
 		$path = $this->pathSearch;
@@ -99,7 +99,7 @@ class getFileSubtitle {
 	}	
 	
 	/**
-	 * DÈplace le fichier dans le dossier appropriÈ : SÈrie [ > Saison] > Episode
+	 * D√©place le fichier dans le dossier appropri√© : S√©rie [ > Saison] > Episode
 	 */
 	public function relocateEpisode($data) {
 		$comp = "";
@@ -136,22 +136,22 @@ class getFileSubtitle {
 					if ($this->pathMove!="") {
 						$this->relocateEpisode($f);
 					}
-					echo $f->getSimpleName(1)." : Un sous-titre a ÈtÈ trouvÈ\n";
+					echo $f->getSimpleName(1)." : Un sous-titre a √©t√© trouv√©\n";
 				}
 				else {
-					echo $f->getSimpleName(1)." : Aucun sous-titre trouvÈ\n";
+					echo $f->getSimpleName(1)." : Aucun sous-titre trouv√©\n";
 				}
 			}
 		}
 		else {
-			echo "Aucun sous-titre ‡ rechercher.\n";
+			echo "Aucun sous-titre √† rechercher.\n";
 		}
 	}
 }
 
 
 /**
- * RecupËre les infos importantes ‡ partir du nom du fichier
+ * Recup√®re les infos importantes √† partir du nom du fichier
  */
 class fileData {
 	public $saison;
@@ -230,7 +230,7 @@ class fileData {
 }
 
 /**
- * Base de source pour le tÈlÈchargement des sous-titres
+ * Base de source pour le t√©l√©chargement des sous-titres
  */
 class sourceSubtitle {
 	public $base;
