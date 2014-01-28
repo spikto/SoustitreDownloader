@@ -114,8 +114,8 @@ class getFileSubtitle {
 			if (file_exists($this->pathMove.$data->serie."/Saison ".intval($data->saison))) $comp .= "/Saison ".intval($data->saison);
 			elseif (file_exists($this->pathMove.$data->serie."/Season ".intval($data->saison))) $comp .= "/Season ".intval($data->saison);
 		}
-		rename($this->pathSearch.$data->info["basename"], $this->pathMove.$comp."/".$data->info["basename"]);
-		rename($this->pathSearch.$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->info["filename"].".srt");
+		rename($data->info["dirname"].'/'.$data->info["basename"], $this->pathMove.$comp."/".$data->info["basename"]);
+		rename($data->info["dirname"].'/'.$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->info["filename"].".srt");
 		if ($this->cleanName) {
 			rename($this->pathMove.$comp."/".$data->info["basename"], $this->pathMove.$comp."/".$data->getSimpleName(3).".".$data->info["extension"]);
 			rename($this->pathMove.$comp."/".$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->getSimpleName(3).".srt");
