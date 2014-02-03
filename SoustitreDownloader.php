@@ -2,11 +2,11 @@
 /**
  * SoustitreDownlaoder
  *
- * Ce script PHP permet de télécharger des sous-titres automatiques à partir du site addic7ed.com
+ * Ce script PHP permet de tÃ©lÃ©charger des sous-titres automatiques Ã  partir du site addic7ed.com
  *
  * PHP 5
  *
- * @copyright     Copyright 2013, Spikto, Thomas Buée
+ * @copyright     Copyright 2013, Spikto, Thomas BuÃ©e
  */
  
 //ini_set("display_errors", "1");
@@ -15,7 +15,7 @@ set_time_limit(0);
 $app = new getFileSubtitle($argv);
 
 /**
- * Gestion des sous-titres à télécharger
+ * Gestion des sous-titres Ã  tÃ©lÃ©charger
  */
 class getFileSubtitle {
 	private $extFile = array("mp4","mkv","m4v","avi","mov","wmv","mpg");
@@ -59,7 +59,7 @@ class getFileSubtitle {
 	}
 	
 	/**
-	 * Recherche des sous-titres à télécharger
+	 * Recherche des sous-titres Ã  tÃ©lÃ©charger
 	 */
 	public function findFile() {
 		$path = $this->pathSearch;
@@ -99,7 +99,7 @@ class getFileSubtitle {
 	}	
 	
 	/**
-	 * Déplace le fichier dans le dossier approprié : Série [ > Saison] > Episode
+	 * DÃ©place le fichier dans le dossier appropriÃ© : SÃ©rie [ > Saison] > Episode
 	 */
 	public function relocateEpisode($data) {
 		$comp = "";
@@ -114,8 +114,8 @@ class getFileSubtitle {
 			if (file_exists($this->pathMove.$data->serie."/Saison ".intval($data->saison))) $comp .= "/Saison ".intval($data->saison);
 			elseif (file_exists($this->pathMove.$data->serie."/Season ".intval($data->saison))) $comp .= "/Season ".intval($data->saison);
 		}
-		rename($this->pathSearch.$data->info["basename"], $this->pathMove.$comp."/".$data->info["basename"]);
-		rename($this->pathSearch.$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->info["filename"].".srt");
+		rename($data->info["dirname"].'/'.$data->info["basename"], $this->pathMove.$comp."/".$data->info["basename"]);
+		rename($data->info["dirname"].'/'.$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->info["filename"].".srt");
 		if ($this->cleanName) {
 			rename($this->pathMove.$comp."/".$data->info["basename"], $this->pathMove.$comp."/".$data->getSimpleName(3).".".$data->info["extension"]);
 			rename($this->pathMove.$comp."/".$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->getSimpleName(3).".srt");
@@ -136,22 +136,22 @@ class getFileSubtitle {
 					if ($this->pathMove!="") {
 						$this->relocateEpisode($f);
 					}
-					echo $f->getSimpleName(1)." : Un sous-titre a été trouvé\n";
+					echo $f->getSimpleName(1)." : Un sous-titre a Ã©tÃ© trouvÃ©\n";
 				}
 				else {
-					echo $f->getSimpleName(1)." : Aucun sous-titre trouvé\n";
+					echo $f->getSimpleName(1)." : Aucun sous-titre trouvÃ©\n";
 				}
 			}
 		}
 		else {
-			echo "Aucun sous-titre à rechercher.\n";
+			echo "Aucun sous-titre Ã  rechercher.\n";
 		}
 	}
 }
 
 
 /**
- * Recupère les infos importantes à partir du nom du fichier
+ * RecupÃ¨re les infos importantes Ã  partir du nom du fichier
  */
 class fileData {
 	public $saison;
@@ -198,8 +198,9 @@ class fileData {
 	
 	public function cleanSerie($serie) {
 		$tabReplace = array(
-			"S.H.I.E.L.D." => "SHIELD",
+			/*"S.H.I.E.L.D." => "SHIELD",
 			"S.H.I.E.L.D" => "SHIELD",
+			"Marvel's" => "Marvels",*/
 			"." => " "
 		);
 		foreach($tabReplace as $b => $f) {
@@ -230,7 +231,7 @@ class fileData {
 }
 
 /**
- * Base de source pour le téléchargement des sous-titres
+ * Base de source pour le tÃ©lÃ©chargement des sous-titres
  */
 class sourceSubtitle {
 	public $base;
@@ -288,7 +289,7 @@ class addictedSubtitle extends sourceSubtitle {
 
 		if (count($result)>0) {
 			$dec = explode("/", $result[1]);
-			$dec[count($dec)-1]="false";
+			$dec[count($dec)-1]="8";
 			return $this->findSubtitle(implode("/", $dec));
 		}
 		else {
