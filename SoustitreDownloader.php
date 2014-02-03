@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * SoustitreDownlaoder
  *
@@ -321,13 +321,11 @@ class addictedSubtitle extends sourceSubtitle {
 				$resultVersion = array();
 				$dec = explode("/", $l);
 				preg_match_all("#saveFavorite\(".$dec[0].",8,[0-9]*\)(.*)\/".$mod.$dec[0]."\/".$dec[1]."\"#msui", $b, $resultComplet);
-				if (isset($resultComplet[1][0])) {
-					if (!preg_match("#([0-9]*\.[0-9]*% Completed)#msui", $resultComplet[1][0])) {
-						$completedLink[] = str_replace("\/", "/",$mod).$l;
-					}
-					else {
-						$valid = false;
-					}
+				if (isset($resultComplet[1][0]) && !preg_match("#([0-9]*\.[0-9]*% Completed)#msui", $resultComplet[1][0])) {
+					$completedLink[] = str_replace("\/", "/",$mod).$l;
+				}
+				else {
+					$valid = false;
 				}
 
 				if ($this->search->version!="") {
