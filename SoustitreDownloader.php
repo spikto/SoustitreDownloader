@@ -255,6 +255,7 @@ class sourceSubtitle {
 			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); 
 			curl_setopt($curl, CURLOPT_TIMEOUT, 240); 
 			curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 240); 
+			curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 			if ($this->referer!="") curl_setopt($curl, CURLOPT_REFERER, $this->referer);
 
 			$return = curl_exec($curl);
@@ -285,6 +286,7 @@ class addictedSubtitle extends sourceSubtitle {
 	
 	public function findEpisode() {
 		$episodes = $this->getDataFromLink("search.php?search=".rawurlencode($this->search->getSimpleName())."&Submit=Search");
+		//var_dump($episodes);
 		preg_match("#<a href=\"([^\"]*)\"[^>]*>".$this->search->serie."[^<]*".$this->search->saison."x".$this->search->episode."[^<]*</a>#", $episodes, $result);
 
 		if (count($result)>0) {
@@ -299,12 +301,15 @@ class addictedSubtitle extends sourceSubtitle {
 				$dec[count($dec)-1]="8";
 				return $this->findSubtitle(implode("/", $dec));
 			}
+			else if (preg_match("#(".$this->search->serie."[^<]*".$this->search->saison."x".$this->search->episode.")#msui", $episodes)) {
+				return $this->findSubtitle(null, $episodes);
+			}
 		}
 		return false;
 	}
 
-	public function findSubtitle($link) {
-		$soustitres = $this->getDataFromLink($link);
+	public function findSubtitle($link, $data=null) {
+		$soustitres = ($data==null ? $this->getDataFromLink($link) : $data);
 		$blocs = explode("<div id=\"container95m\">", $soustitres);
 		if (count($blocs)>1) unset($blocs[0]);
 		$linkSubtitle="";
