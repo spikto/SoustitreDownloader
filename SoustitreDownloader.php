@@ -335,7 +335,7 @@ class addictedSubtitle extends sourceSubtitle {
 
 				if ($this->search->version!="") {
 					if ((preg_match_all("#/>Version ([^<]*)#msui", $b, $resultV) && strpos($resultV[1][0], $this->search->version)!==false) || 
-						(preg_match_all("#<img src=\"/images/movie_faq.png\" title=\"([^\"]*)#msui", $b, $resultV2) && strpos($resultV2[1][0], $this->search->version)!==false) || 
+						(preg_match_all("#<img src=\"http://cdn.addic7ed.com/images/movie_faq.png\" title=\"([^\"]*)#msui", $b, $resultV2) && strpos($resultV2[1][0], $this->search->version)!==false) || 
 						(preg_match_all("#class=\"newsDate\" colspan=\"3\">([^<]*)#msui", $b, $resultV3) && strpos($resultV3[1][0], $this->search->version)!==false)
 						) {
 						$completedLink[] = str_replace("\/", "/",$mod).$l;
