@@ -24,17 +24,20 @@ class getFileSubtitle {
 	private $pathMove;
 	private $emailSend;
 	private $emailSerie;
+	private $subLng;
+	private $defaultLng = "fr";
 	private $createFolder=false;
 	private $cleanName=false;
 	private $forceDownload=false;
 	private $recursive=false;
 
 	public function __construct($argv) {
-		$this->pathSearch = (isset($argv[1]) ? $argv[1] : "");
-		$this->pathMove = (isset($argv[2]) ? $argv[2] : "");
-		$this->emailSend = (isset($argv[4]) ? $argv[4] : "");
-		$this->emailSerie = (isset($argv[5]) ? $argv[5] : "");
-		if (isset($argv[3])) {
+		$this->pathSearch = (!empty($argv[1]) ? $argv[1] : "");
+		$this->pathMove = (!empty($argv[2]) ? $argv[2] : "");
+		$this->emailSend = (!empty($argv[4]) ? $argv[4] : "");
+		$this->emailSerie = (!empty($argv[5]) ? $argv[5] : "");
+		$this->subLng = (!empty($argv[6]) ? $argv[6] : $this->defaultLng);
+		if (!empty($argv[3])) {
 			for($i=0;$i<strlen($argv[3]);$i++) {
 				if ($argv[3][$i]=="f") $this->createFolder=true;
 				if ($argv[3][$i]=="d") $this->forceDownload=true;
@@ -128,7 +131,7 @@ class getFileSubtitle {
 	public function findSubtitle() {
 		if (count($this->fileToCheck)>0) {
 			foreach($this->fileToCheck as $f) {
-				$addicted = new addictedSubtitle($f, $this->forceDownload);
+				$addicted = new addictedSubtitle($f, $this->forceDownload, $this->subLng);
 				if ($addicted->findEpisode()) {
 					if ($this->emailSend!="" && (($this->emailSerie!="" && strtolower($f->serie)==strtolower($this->emailSerie)) || $this->emailSerie=="")) {
 						sendEmail($this->emailSend, $f->getSimpleName(1), $f->info["filename"], $this->pathSearch);
@@ -234,14 +237,17 @@ class fileData {
  * Base de source pour le téléchargement des sous-titres
  */
 class sourceSubtitle {
+	public $lng;
 	public $base;
 	public $referer;
 	public $search;
 	public $forceExistant;
+	public $tabLng;
 
-	public function __construct($search, $force = false) {
+	public function __construct($search, $force = false, $lng = "fr") {
 		$this->search = $search;
 		$this->forceExistant = $force;
+		$this->lng = $lng;
 	}
 	
 	protected function getDataFromLink($link) {
@@ -283,76 +289,56 @@ class sourceSubtitle {
  */
 class addictedSubtitle extends sourceSubtitle {
 	public $base = "http://www.addic7ed.com/";
+	public $tabLng = array("fr" => 8, "en" => 1, "it" => 7, "de" => 17);
 	
-	public function findEpisode() {
-		$episodes = $this->getDataFromLink("search.php?search=".rawurlencode($this->search->getSimpleName())."&Submit=Search");
-		//var_dump($episodes);
-		preg_match("#<a href=\"([^\"]*)\"[^>]*>".$this->search->serie."[^<]*".$this->search->saison."x".$this->search->episode."[^<]*</a>#", $episodes, $result);
-
-		if (count($result)>0) {
-			$dec = explode("/", $result[1]);
-			$dec[count($dec)-1]="8";
-			return $this->findSubtitle(implode("/", $dec));
+	public function __construct() {
+		parent::__construct();
+		// Verifie que la langue saisie existe
+		if (isset($this->tabLng[$this->lng])) {
+			$this->lng = $this->tabLng[$this->lng];
 		}
 		else {
-			preg_match("#<a href=\"([^\"]*)\".*>.*".$this->search->saison."x".$this->search->episode.".*</a>#", $episodes, $result);
-			if (count($result)>0) {
-				$dec = explode("/", $result[1]);
-				$dec[count($dec)-1]="8";
-				return $this->findSubtitle(implode("/", $dec));
-			}
-			else if (preg_match("#(".$this->search->serie."[^<]*".$this->search->saison."x".$this->search->episode.")#msui", $episodes)) {
-				return $this->findSubtitle(null, $episodes);
-			}
+			$this->lng = 8;
+		}
+	}
+
+	public function findEpisode() {
+		$shows = $this->getDataFromLink("shows.php");
+		preg_match("#<option value=\"([0-9]*)\" >".$this->search->serie."</option>#i", $shows, $result);
+		if (count($result)>0) {
+			return $this->findSubtitle("ajax_loadShow.php?show=".$result[1]."&season=".$this->search->saison."&langs=|".$this->lng."|&hd=0&hi=0");
 		}
 		return false;
 	}
 
 	public function findSubtitle($link, $data=null) {
 		$soustitres = ($data==null ? $this->getDataFromLink($link) : $data);
-		$blocs = explode("<div id=\"container95m\">", $soustitres);
-		if (count($blocs)>1) unset($blocs[0]);
-		$linkSubtitle="";
+		$blocs = explode("<tr class=\"epeven completed\">", $soustitres);
 		$completedLink = array();
+		$linkSubtitle="";
+		if (count($blocs)>1) unset($blocs[0]);
 		foreach ($blocs as $b) {
 			$valid = true;
-			$mod = "updated\/8\/";
-			preg_match_all("#\/".$mod."([0-9/]*)#", $b, $resultLink);
-			if (empty($resultLink[1])) {
-				$mod = "original\/";
-				preg_match_all("#\/".$mod."([0-9/]*)#", $b, $resultLink);
-			}
-			foreach($resultLink[1] as $l) {
-				$resultVersion = array();
-				$dec = explode("/", $l);
-				preg_match_all("#saveFavorite\(".$dec[0].",8,[0-9]*\)(.*)\/".$mod.$dec[0]."\/".$dec[1]."\"#msui", $b, $resultComplet);
-				if (isset($resultComplet[1][0]) && !preg_match("#([0-9]*\.[0-9]*% Completed)#msui", $resultComplet[1][0])) {
-					$completedLink[] = str_replace("\/", "/",$mod).$l;
+			preg_match("#<td class=\"c\"><a href=\"([a-zA-Z0-9/-]*)\">Download</a></td>#", $b, $resultLink);
+			if(!empty($resultLink) && 
+				preg_match("#<td>".intval($this->search->saison)."</td><td>".intval($this->search->episode)."</td>#", $b) && 
+				preg_match("#<td class=\"c\">Completed</td>#", $b)) {
+				if ($this->search->version!="" && preg_match("#<td class=\"c\">".$this->search->version."</td>#", $b)) {
+					$l = $resultLink[1];
 				}
 				else {
-					$valid = false;
-				}
-
-				if ($this->search->version!="") {
-					if ((preg_match_all("#/>Version ([^<]*)#msui", $b, $resultV) && strpos($resultV[1][0], $this->search->version)!==false) || 
-						(preg_match_all("#<img src=\"http://cdn.addic7ed.com/images/movie_faq.png\" title=\"([^\"]*)#msui", $b, $resultV2) && strpos($resultV2[1][0], $this->search->version)!==false) || 
-						(preg_match_all("#class=\"newsDate\" colspan=\"3\">([^<]*)#msui", $b, $resultV3) && strpos($resultV3[1][0], $this->search->version)!==false)
-						) {
-						$completedLink[] = str_replace("\/", "/",$mod).$l;
-					}
-					else {
-						$valid = false;
-					}
-				}
-
-				if ($valid) {
-					$linkSubtitle = str_replace("\/", "/",$mod).$l;
-					break;
+					$completedLink[] = $resultLink[1];
 				}
 			}
-			if ($valid && $linkSubtitle!="") break;
+			else {
+				$valid = false;	
+			}
+			if ($valid) {
+				$linkSubtitle = $l;
+				break;
+			}
 		}
-		if ($this->forceExistant && $linkSubtitle=="" && !empty($completedLink)) {
+		if ($linkSubtitle=="" && !empty($completedLink)) {
 			$linkSubtitle = $completedLink[0];
 		}
 		if ($linkSubtitle!="") {

@@ -7,7 +7,7 @@ Ce script PHP permet de télécharger des sous-titres automatiques à partir du 
 Comment ça marche ?
 -------------------
 
-    php subtitleDownloader.php arg1 [arg2 [arg3 [arg4 [arg5]]]]
+    php subtitleDownloader.php arg1 [arg2 [arg3 [arg4 [arg5 [arg6]]]]]
 
 **arg1** Chemin des fichiers pour lesquels il faut trouver un sous-titre.
 
@@ -24,3 +24,5 @@ Comment ça marche ?
 **arg4** Email auquel le fichier de sous-titre sera automatiquement envoyé en plus d'être enregistrer sur le disque.
 
 **arg5** Filtrer les sous-titres envoyés sur une serie précise.
+
+**arg6** Choisir la langue des sous-titres (fr, en, it, de)
