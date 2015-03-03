@@ -4,6 +4,11 @@ SoustitreDownloader
 Ce script PHP permet de télécharger des sous-titres automatiques à partir du site addic7ed.com
 
 
+Prérequis
+-------------------
+
+	sudo apt-get install curl php5-curl
+
 Comment ça marche ?
 -------------------
 
