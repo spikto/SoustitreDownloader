@@ -201,10 +201,10 @@ class fileData {
 	
 	public function cleanSerie($serie) {
 		$tabReplace = array(
-			/*"S.H.I.E.L.D." => "SHIELD",
-			"S.H.I.E.L.D" => "SHIELD",
-			"Marvel's" => "Marvels",*/
-			"." => " "
+			"." => " ",
+			"S H I E L D " => "S.H.I.E.L.D.",
+			"SHIELD " => "S.H.I.E.L.D.",
+			"Marvels" => "Marvel's"
 		);
 		foreach($tabReplace as $b => $f) {
 			$serie = str_replace($b, $f, $serie);
