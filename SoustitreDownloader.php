@@ -291,8 +291,8 @@ class addictedSubtitle extends sourceSubtitle {
 	public $base = "http://www.addic7ed.com/";
 	public $tabLng = array("fr" => 8, "en" => 1, "it" => 7, "de" => 17);
 	
-	public function __construct() {
-		parent::__construct();
+	public function __construct($search, $force = false, $lng = "fr") {
+		parent::__construct($search, $force, $lng);
 		// Verifie que la langue saisie existe
 		if (isset($this->tabLng[$this->lng])) {
 			$this->lng = $this->tabLng[$this->lng];
