@@ -94,7 +94,7 @@ class getFileSubtitle {
 								unlink($sl);
 							}
 						}
-						rmdir($l."/");
+						rmdir_recursive($l."/");
 					}
 				}
 			}
@@ -109,9 +109,24 @@ class getFileSubtitle {
 		if (file_exists($this->pathMove.$data->serie)) {
 			$comp .= $data->serie;
 		}
-		elseif ($this->createFolder && !file_exists($this->pathMove.$data->serie)) {
-			mkdir($this->pathMove.$data->serie);
-			$comp .= $data->serie;
+		elseif (!file_exists($this->pathMove.$data->serie)) {
+			$exist = false;
+			$list = glob_recursive($this->pathMove);
+			foreach ($list as $l) {
+				$lowerSerie = strtolower($data->serie);
+				$dec = explode("/", $l);
+				$folder = end($dec);
+				if (strtolower($folder)==$lowerSerie) {
+					$comp .= $folder;
+					$exist = true;
+					break;
+				}
+			}
+			if (!$exist && $this->createFolder) {
+				mkdir($this->pathMove.$data->serie);	
+				$comp .= $data->serie;
+				$exist = true;
+			}
 		}
 		if ($comp!="") {
 			if (file_exists($this->pathMove.$data->serie."/Saison ".intval($data->saison))) $comp .= "/Saison ".intval($data->saison);
@@ -187,7 +202,7 @@ class fileData {
 				$this->serie = $this->cleanSerie($result2[1]);
 			}
 		}
-		else if (preg_match_all("#[. ]([0-9])([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)) {
+		else if (preg_match_all("#[. ]([0-9]{1,2})([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)) {
 			$result = end($result);
 			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
 			$this->episode = $result[2];
@@ -438,5 +453,19 @@ function glob_recursive($path, $recursive=false) {
 			closedir($handle);
 		}
 	}
+	return $list;
+}
+
+function rmdir_recursive($path, $recursive=false) {
+	$list = glob_recursive($path);
+	foreach($list as $l) {
+		if (is_dir($l)) {
+			rmdir_recursive($l);
+		}
+		else {
+			unlink($l);
+		}
+	}
+	rmdir($path);
 	return $list;
 }
