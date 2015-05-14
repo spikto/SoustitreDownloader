@@ -145,7 +145,7 @@ class getFileSubtitle {
 	 */
 	public function findSubtitle() {
 		if (count($this->fileToCheck)>0) {
-			foreach($this->fileToCheck as $f) {
+			foreach($this->fileToCheck as $k => $f) {
 				$addicted = new addictedSubtitle($f, $this->forceDownload, $this->subLng);
 				if ($addicted->findEpisode()) {
 					if ($this->emailSend!="" && (($this->emailSerie!="" && strtolower($f->serie)==strtolower($this->emailSerie)) || $this->emailSerie=="")) {
@@ -206,6 +206,14 @@ class fileData {
 			$result = end($result);
 			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
 			$this->episode = $result[2];
+			if (preg_match("#(.*)".$result[1].$this->episode."#", $file, $result2)) {
+				$this->serie = $this->cleanSerie($result2[1]);
+			}
+		}
+		else if (preg_match_all("#[. ]([0-9]{1,2})([0-9]{4})[. ]#", $file, $result, PREG_SET_ORDER)) {
+			$result = end($result);
+			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
+			$this->episode = substr($result[2],0, 2);
 			if (preg_match("#(.*)".$result[1].$this->episode."#", $file, $result2)) {
 				$this->serie = $this->cleanSerie($result2[1]);
 			}
@@ -319,7 +327,7 @@ class addictedSubtitle extends sourceSubtitle {
 
 	public function findEpisode() {
 		$shows = $this->getDataFromLink("shows.php");
-		preg_match("#<option value=\"([0-9]*)\" >".$this->search->serie."</option>#i", $shows, $result);
+		preg_match("#<option value=\"([0-9]*)\" >".preg_replace("#NCIS#i","NCIS:", $this->search->serie)."</option>#i", $shows, $result);
 		if (count($result)>0) {
 			return $this->findSubtitle("ajax_loadShow.php?show=".$result[1]."&season=".$this->search->saison."&langs=|".$this->lng."|&hd=0&hi=0");
 		}
@@ -334,10 +342,10 @@ class addictedSubtitle extends sourceSubtitle {
 		if (count($blocs)>1) unset($blocs[0]);
 		foreach ($blocs as $b) {
 			$valid = true;
-			preg_match("#<td class=\"c\"><a href=\"([a-zA-Z0-9/-]*)\">Download</a></td>#", $b, $resultLink);
+			preg_match("#<td class=\"c\"><a href=\"([a-zA-Z0-9/-]*)\">(Download|Télécharger)</a></td>#", $b, $resultLink);
 			if(!empty($resultLink) && 
 				preg_match("#<td>".intval($this->search->saison)."</td><td>".intval($this->search->episode)."</td>#", $b) && 
-				preg_match("#<td class=\"c\">Completed</td>#", $b)) {
+				preg_match("#<td class=\"c\">(Completed|Terminé)</td>#", $b)) {
 				if ($this->search->version!="" && preg_match("#<td class=\"c\">".$this->search->version."</td>#", $b)) {
 					$l = $resultLink[1];
 				}
