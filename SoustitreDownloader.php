@@ -202,15 +202,16 @@ class fileData {
 				$this->serie = $this->cleanSerie($result2[1]);
 			}
 		}
-		else if (preg_match_all("#[. ]([0-9]{1,2})([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)) {
+		else if (preg_match_all("#[. ]([0-9]{4})[. ]([0-9]{1,2})([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)) {
 			$result = end($result);
-			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
-			$this->episode = $result[2];
-			if (preg_match("#(.*)".$result[1].$this->episode."#", $file, $result2)) {
+			$this->saison = ($result[2]<10 ? "0".$result[2] : $result[2]);
+			$this->episode = $result[3];
+			if (preg_match("#(.*)".$result[1]."\.".$result[2].$this->episode."#", $file, $result2)) {
 				$this->serie = $this->cleanSerie($result2[1]);
 			}
 		}
-		else if (preg_match_all("#[. ]([0-9]{1,2})([0-9]{4})[. ]#", $file, $result, PREG_SET_ORDER)) {
+		else if (preg_match_all("#[. ]([0-9]{1,2})([0-9]{2})[. ]#", $file, $result, PREG_SET_ORDER)
+			|| preg_match_all("#[. ]([0-9]{1,2})([0-9]{4})[. ]#", $file, $result, PREG_SET_ORDER)) {
 			$result = end($result);
 			$this->saison = ($result[1]<10 ? "0".$result[1] : $result[1]);
 			$this->episode = substr($result[2],0, 2);
