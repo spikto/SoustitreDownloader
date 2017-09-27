@@ -8,7 +8,7 @@
  *
  * @copyright     Copyright 2013, Spikto, Thomas Buée
  */
- 
+
 //ini_set("display_errors", "1");
 set_time_limit(0);
 
@@ -49,18 +49,18 @@ class getFileSubtitle {
 		$this->logicPath();
 		$this->findFile();
 		$this->findSubtitle();
-	}	
-	
+	}
+
 	public function updateScript() {
 		exec("git reset --hard HEAD");
 		exec("git pull origin master");
-	}	
-	
+	}
+
 	public function logicPath() {
 		if ($this->pathSearch!="" && substr($this->pathSearch, -1)!="/") $this->pathSearch .= "/";
 		if ($this->pathMove!="" && substr($this->pathMove, -1)!="/") $this->pathMove .= "/";
 	}
-	
+
 	/**
 	 * Recherche des sous-titres à télécharger
 	 */
@@ -99,8 +99,8 @@ class getFileSubtitle {
 				}
 			}
 		}
-	}	
-	
+	}
+
 	/**
 	 * Déplace le fichier dans le dossier approprié : Série [ > Saison] > Episode
 	 */
@@ -123,7 +123,7 @@ class getFileSubtitle {
 				}
 			}
 			if (!$exist && $this->createFolder) {
-				mkdir($this->pathMove.$data->serie);	
+				mkdir($this->pathMove.$data->serie);
 				$comp .= $data->serie;
 				$exist = true;
 			}
@@ -139,7 +139,7 @@ class getFileSubtitle {
 			rename($this->pathMove.$comp."/".$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->getSimpleName(3).".srt");
 		}
 	}
-	
+
 	/**
 	 * Recherche du sous-titre
 	 */
@@ -177,13 +177,13 @@ class fileData {
 	public $serie;
 	public $version;
 	public $info;
-	
+
 	public function __construct($info) {
 		$this->info = $info;
 		$this->readName();
 	}
 
-	
+
 	public function readName() {
 		$file = $this->info["filename"];
 		//preg_match("#([^0-9]+)([0-9]{2})E([0-9]{2})#", $file, $result2);
@@ -222,7 +222,7 @@ class fileData {
 		preg_match("#(LOL|AFG|FQM|ASAP|EVOLVE|IMMERSE|2HD|KILLERS)#msui", $file, $result3);
 		$this->version = strtoupper(isset($result3[1]) ? $result3[1] : "");
 	}
-	
+
 	public function cleanSerie($serie) {
 		$tabReplace = array(
 			"." => " ",
@@ -251,7 +251,7 @@ class fileData {
 			return $this->serie." S".$this->saison." E".$this->episode;
 		}
 	}
-	
+
 	public function isValid() {
 		return ($this->serie!="" && $this->saison!="" && $this->episode);
 	}
@@ -273,39 +273,39 @@ class sourceSubtitle {
 		$this->forceExistant = $force;
 		$this->lng = $lng;
 	}
-	
+
 	protected function getDataFromLink($link) {
 		$cpt = 0;
 		$return = false;
 		while($return==false && $cpt<3) {
-			$curl = curl_init(); 
-			curl_setopt($curl, CURLOPT_URL, $this->base.$link); 
+			$curl = curl_init();
+			curl_setopt($curl, CURLOPT_URL, $this->base.$link);
 			//curl_setopt($curl, CURLOPT_HEADER, true);
-			curl_setopt($curl, CURLOPT_COOKIESESSION, true); 
-			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); 
-			curl_setopt($curl, CURLOPT_TIMEOUT, 240); 
-			curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 240); 
+			curl_setopt($curl, CURLOPT_COOKIESESSION, true);
+			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($curl, CURLOPT_TIMEOUT, 240);
+			curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 240);
 			curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 			if ($this->referer!="") curl_setopt($curl, CURLOPT_REFERER, $this->referer);
 
 			$return = curl_exec($curl);
-			curl_close($curl); 
+			curl_close($curl);
 			$cpt++;
 		}
 		$this->referer = $this->base.$link;
 		return $return;
 	}
-	
-	public function findEpisode($nom) {
-	
+
+	public function findEpisode() {
+
 	}
 	public function findSubtitle($link) {
-	
+
 	}
 	public function saveSubtitle($lien) {
-	
+
 	}
-	
+
 }
 
 /**
@@ -314,7 +314,7 @@ class sourceSubtitle {
 class addictedSubtitle extends sourceSubtitle {
 	public $base = "http://www.addic7ed.com/";
 	public $tabLng = array("fr" => 8, "en" => 1, "it" => 7, "de" => 17);
-	
+
 	public function __construct($search, $force = false, $lng = "fr") {
 		parent::__construct($search, $force, $lng);
 		// Verifie que la langue saisie existe
@@ -327,7 +327,7 @@ class addictedSubtitle extends sourceSubtitle {
 	}
 
 	public function findEpisode() {
-		$shows = $this->getDataFromLink("shows.php");
+		$shows = $this->getDataFromLink("ajax_getShows.php");
 		preg_match("#<option value=\"([0-9]*)\" >".preg_replace("#NCIS#i","NCIS:", $this->search->serie)."</option>#i", $shows, $result);
 		if (count($result)>0) {
 			return $this->findSubtitle("ajax_loadShow.php?show=".$result[1]."&season=".$this->search->saison."&langs=|".$this->lng."|&hd=0&hi=0");
@@ -344,8 +344,8 @@ class addictedSubtitle extends sourceSubtitle {
 		foreach ($blocs as $b) {
 			$valid = true;
 			preg_match("#<td class=\"c\"><a href=\"([a-zA-Z0-9/-]*)\">(Download|Télécharger)</a></td>#", $b, $resultLink);
-			if(!empty($resultLink) && 
-				preg_match("#<td>".intval($this->search->saison)."</td><td>".intval($this->search->episode)."</td>#", $b) && 
+			if(!empty($resultLink) &&
+				preg_match("#<td>".intval($this->search->saison)."</td><td>".intval($this->search->episode)."</td>#", $b) &&
 				preg_match("#<td class=\"c\">(Completed|Terminé)</td>#", $b)) {
 				if ($this->search->version!="" && preg_match("#<td class=\"c\">".$this->search->version."</td>#", $b)) {
 					$l = $resultLink[1];
@@ -355,7 +355,7 @@ class addictedSubtitle extends sourceSubtitle {
 				}
 			}
 			else {
-				$valid = false;	
+				$valid = false;
 			}
 			if ($valid) {
 				$linkSubtitle = $l;
@@ -380,15 +380,15 @@ class addictedSubtitle extends sourceSubtitle {
 		}
 		return false;
 	}
-	
-	
+
+
 }
 
 function sendEmail($to, $subject, $file, $path) {
-	$random_hash = md5(date('r')); 
+	$random_hash = md5(date('r'));
 	$headers = "From: script@gmail.com\r\nReply-To: script@gmail.com";
-	$headers .= "\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"PHP-mixed-".$random_hash."\""; 
-	$attachment = chunk_split(base64_encode(file_get_contents($path.$file.".srt"))); 
+	$headers .= "\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"PHP-mixed-".$random_hash."\"";
+	$attachment = chunk_split(base64_encode(file_get_contents($path.$file.".srt")));
 	$message = "
 --PHP-mixed-".$random_hash."
 Content-Type: multipart/alternative; boundary=\"PHP-alt-".$random_hash."\"
@@ -400,7 +400,7 @@ Content-Transfer-Encoding: 7bit
 Nouveau fichier !!
 
 --PHP-alt-".$random_hash."
-Content-Type: text/html; charset=\"utf-8\" 
+Content-Type: text/html; charset=\"utf-8\"
 Content-Transfer-Encoding: 7bit
 
 <h2>Nouveau fichier !!</h2>
@@ -409,11 +409,11 @@ Content-Transfer-Encoding: 7bit
 
 --PHP-mixed-".$random_hash."
 Content-Type: application/octet-stream; name=\"".$file.".srt\"
-Content-Transfer-Encoding: base64  
-Content-Disposition: attachment  
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment
 
 ".$attachment."
---PHP-mixed-".$random_hash."-- 
+--PHP-mixed-".$random_hash."--
 
 ";
 	ob_clean();
