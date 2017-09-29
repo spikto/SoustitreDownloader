@@ -6,13 +6,27 @@
  *
  * PHP 5
  *
- * @copyright     Copyright 2013, Spikto, Thomas Buée
+ * @copyright     Copyright 2017, Spikto, Thomas Buée
  */
 
 //ini_set("display_errors", "1");
 set_time_limit(0);
 
-$app = new getFileSubtitle($argv);
+$app = new getFileSubtitle(
+	getopt("fdcru", [
+		"path:",
+		"move::",
+		"email::",
+		"email_filter::",
+		"lang::",
+		"date::",
+		"createFolder",
+		"forceDownload",
+		"cleanName",
+		"recursive",
+		"update"
+	])
+);
 
 /**
  * Gestion des sous-titres à télécharger
@@ -22,6 +36,7 @@ class getFileSubtitle {
 	private $fileToCheck=array();
 	private $pathSearch;
 	private $pathMove;
+	private $dateCheck;
 	private $emailSend;
 	private $emailSerie;
 	private $subLng;
@@ -32,20 +47,19 @@ class getFileSubtitle {
 	private $recursive=false;
 
 	public function __construct($argv) {
-		$this->pathSearch = (!empty($argv[1]) ? $argv[1] : "");
-		$this->pathMove = (!empty($argv[2]) ? $argv[2] : "");
-		$this->emailSend = (!empty($argv[4]) ? $argv[4] : "");
-		$this->emailSerie = (!empty($argv[5]) ? $argv[5] : "");
-		$this->subLng = (!empty($argv[6]) ? $argv[6] : $this->defaultLng);
-		if (!empty($argv[3])) {
-			for($i=0;$i<strlen($argv[3]);$i++) {
-				if ($argv[3][$i]=="f") $this->createFolder=true;
-				if ($argv[3][$i]=="d") $this->forceDownload=true;
-				if ($argv[3][$i]=="c") $this->cleanName=true;
-				if ($argv[3][$i]=="r") $this->recursive=true;
-				if ($argv[3][$i]=="u") $this->updateScript();
-			}
-		}
+		$this->pathSearch = (!empty($argv["path"]) ? $argv["path"] : "");
+		$this->pathMove = (!empty($argv["move"]) ? $argv["move"] : "");
+		$this->emailSend = (!empty($argv["email"]) ? $argv["email"] : "");
+		$this->emailSerie = (!empty($argv["email_filter"]) ? $argv["email_filter"] : "");
+		$this->subLng = (!empty($argv["lang"]) ? $argv["lang"] : $this->defaultLng);
+		$this->dateCheck = (!empty($argv["date"]) ? $argv["date"] : "");
+
+		if (isset($argv["f"]) || isset($argv["createFolder"])) $this->createFolder=true;
+		if (isset($argv["d"]) || isset($argv["forceDownload"])) $this->forceDownload=true;
+		if (isset($argv["c"]) || isset($argv["cleanName"])) $this->cleanName=true;
+		if (isset($argv["r"]) || isset($argv["recursive"])) $this->recursive=true;
+		if (isset($argv["u"]) || isset($argv["update"])) $this->updateScript();
+
 		$this->logicPath();
 		$this->findFile();
 		$this->findSubtitle();
@@ -70,7 +84,7 @@ class getFileSubtitle {
 			$list = glob_perso($path, array(), $this->recursive);
 			foreach($list as $l) {
 				$info = pathinfo($l);
-				if (is_file($l) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"])) {
+				if (is_file($l) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"]) && $this->dateIsValid($l)) {
 					if (!file_exists($info["dirname"]."/".$info["filename"].".srt")) {
 						$this->fileToCheck[] = new fileData($info);
 					}
@@ -85,7 +99,7 @@ class getFileSubtitle {
 						$sublist = glob_perso($l."/");
 						 foreach($sublist as $sl) {
 							$info = pathinfo($sl);
-							if (is_file($sl) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"])) {
+							if (is_file($sl) && in_array($info["extension"], $this->extFile) && !preg_match("#VOSTF|VOSTFR#i", $info["filename"]) && $this->dateIsValid($sl)) {
 								rename($sl, $path.$info["basename"]);
 								$info = pathinfo($path.$info["basename"]);
 								$this->fileToCheck[] = new fileData($info);
@@ -165,6 +179,18 @@ class getFileSubtitle {
 			echo "Aucun sous-titre à rechercher.\n";
 		}
 	}
+
+	/**
+	 *  Verifie que la date est valide
+	 */
+	 public function dateIsValid($file) {
+		 if ($this->dateCheck) {
+			 $time = filemtime($file);
+			 $limitTime = strtotime("-".$this->dateCheck." days");
+			 return ($time > $limitTime);
+		 }
+		 return true;
+	 }
 }
 
 
@@ -275,6 +301,8 @@ class sourceSubtitle {
 	}
 
 	protected function getDataFromLink($link) {
+		$cache = Cache::get($link);
+		if ($cache) return $cache;
 		$cpt = 0;
 		$return = false;
 		while($return==false && $cpt<3) {
@@ -287,11 +315,11 @@ class sourceSubtitle {
 			curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 240);
 			curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 			if ($this->referer!="") curl_setopt($curl, CURLOPT_REFERER, $this->referer);
-
 			$return = curl_exec($curl);
 			curl_close($curl);
 			$cpt++;
 		}
+		Cache::set($link, $return);
 		$this->referer = $this->base.$link;
 		return $return;
 	}
@@ -420,6 +448,22 @@ Content-Disposition: attachment
 	return @mail($to, $subject, $message, $headers);
 }
 
+
+class Cache {
+	protected static $data = [];
+
+	public static function get($name) {
+		if (isset(self::$data[$name])) {
+			return self::$data[$name];
+		}
+		return null;
+	}
+
+	public static function set($name, $value) {
+		self::$data[$name] = $value;
+	}
+
+}
 
 function glob_perso($path, $folder=array(), $recursive=false) {
 	$globalPath;
