@@ -31,3 +31,7 @@ Comment ça marche ?
 **--lang=language** Choisir la langue des sous-titres (fr, en, it, de)
 
 **--date=days** Vérifie la date des fichiers, avec le nombre de jours avant la date actuelle.
+
+**--prefix=string** Ajoute un préfix de votre choix aux sous-titres
+
+**--suffix=string** Ajoute un suffix de votre choix aux sous-titres

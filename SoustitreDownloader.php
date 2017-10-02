@@ -15,11 +15,13 @@ set_time_limit(0);
 $app = new getFileSubtitle(
 	getopt("fdcru", [
 		"path:",
-		"move::",
-		"email::",
-		"email_filter::",
-		"lang::",
-		"date::",
+		"move:",
+		"email:",
+		"email_filter:",
+		"lang:",
+		"date:",
+		"prefix:",
+		"suffix:",
 		"createFolder",
 		"forceDownload",
 		"cleanName",
@@ -53,6 +55,8 @@ class getFileSubtitle {
 		$this->emailSerie = (!empty($argv["email_filter"]) ? $argv["email_filter"] : "");
 		$this->subLng = (!empty($argv["lang"]) ? $argv["lang"] : $this->defaultLng);
 		$this->dateCheck = (!empty($argv["date"]) ? $argv["date"] : "");
+		$this->addPrefix = (!empty($argv["prefix"]) ? $argv["prefix"] : "");
+		$this->addSuffix = (!empty($argv["suffix"]) ? $argv["suffix"] : "");
 
 		if (isset($argv["f"]) || isset($argv["createFolder"])) $this->createFolder=true;
 		if (isset($argv["d"]) || isset($argv["forceDownload"])) $this->forceDownload=true;
@@ -147,10 +151,19 @@ class getFileSubtitle {
 			elseif (file_exists($this->pathMove.$data->serie."/Season ".intval($data->saison))) $comp .= "/Season ".intval($data->saison);
 		}
 		rename($data->info["dirname"].'/'.$data->info["basename"], $this->pathMove.$comp."/".$data->info["basename"]);
-		rename($data->info["dirname"].'/'.$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->info["filename"].".srt");
+		rename($data->info["dirname"].'/'.$data->info["filename"].".srt", $this->pathMove.$comp."/".$this->addPrefix.$data->info["filename"].$this->addSuffix.".srt");
 		if ($this->cleanName) {
 			rename($this->pathMove.$comp."/".$data->info["basename"], $this->pathMove.$comp."/".$data->getSimpleName(3).".".$data->info["extension"]);
-			rename($this->pathMove.$comp."/".$data->info["filename"].".srt", $this->pathMove.$comp."/".$data->getSimpleName(3).".srt");
+			rename($this->pathMove.$comp."/".$this->addPrefix.$data->info["filename"].$this->addSuffix.".srt", $this->pathMove.$comp."/".$this->addPrefix.$data->getSimpleName(3).$this->addSuffix.".srt");
+		}
+	}
+
+	/**
+	  *  Ajoute le préfix et le suffix quand il n'y pas de déplacement de fichier
+	  */
+	public function renameSubtitle($data) {
+		if ($this->addPrefix || $this->addSuffix) {
+			rename($data->info["dirname"].'/'.$data->info["filename"].".srt", $data->info["dirname"].'/'.$this->addPrefix.$data->info["filename"].$this->addSuffix.".srt");
 		}
 	}
 
@@ -168,6 +181,7 @@ class getFileSubtitle {
 					if ($this->pathMove!="") {
 						$this->relocateEpisode($f);
 					}
+					else { $this->renameSubtitle($f); }
 					echo $f->getSimpleName(1)." : Un sous-titre a été trouvé\n";
 				}
 				else {
