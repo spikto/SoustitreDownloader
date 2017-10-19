@@ -316,6 +316,7 @@ class sourceSubtitle {
 
 	protected function getDataFromLink($link) {
 		$cache = Cache::get($link);
+		$this->referer = $this->base.$link;
 		if ($cache) return $cache;
 		$cpt = 0;
 		$return = false;
@@ -334,7 +335,6 @@ class sourceSubtitle {
 			$cpt++;
 		}
 		Cache::set($link, $return);
-		$this->referer = $this->base.$link;
 		return $return;
 	}
 
