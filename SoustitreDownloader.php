@@ -399,7 +399,7 @@ class addictedSubtitle extends sourceSubtitle {
 			else {
 				$valid = false;
 			}
-			if ($valid) {
+			if ($valid && isset($l)) {
 				$linkSubtitle = $l;
 				break;
 			}
