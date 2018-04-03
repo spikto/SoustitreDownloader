@@ -414,7 +414,7 @@ class addictedSubtitle extends sourceSubtitle {
 	}
 	public function saveSubtitle($link) {
 		$soustitre = $this->getDataFromLink($link);
-		if ($soustitre!="") {
+		if ($soustitre!="" && !preg_match("#<!DOCTYPE#", $soustitre)) {
 			$fp = fopen($this->search->info["dirname"]."/".$this->search->info["filename"].".srt", "a+");
 			fwrite($fp, $soustitre);
 			fclose($fp);
