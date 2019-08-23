@@ -1,7 +1,7 @@
 SoustitreDownloader
 ===================
 
-Ce script PHP permet de télécharger des sous-titres automatiques à partir du site addic7ed.com
+Ce script PHP permet de télécharger des sous-titres automatiques à partir du site addic7ed.com et betaseries
 
 
 Prérequis
@@ -35,3 +35,5 @@ Comment ça marche ?
 **--prefix=string** Ajoute un préfix de votre choix aux sous-titres
 
 **--suffix=string** Ajoute un suffix de votre choix aux sous-titres
+
+**--betaseries_key=string** Ajouter un clé à l'API betaseries: https://www.betaseries.com/api/

@@ -26,7 +26,8 @@ $app = new getFileSubtitle(
 		"forceDownload",
 		"cleanName",
 		"recursive",
-		"update"
+		"update",
+		'betaseries_key:'
 	])
 );
 
@@ -47,6 +48,14 @@ class getFileSubtitle {
 	private $cleanName=false;
 	private $forceDownload=false;
 	private $recursive=false;
+	private $availableSources = [
+		'betaseries',
+		'addicted'
+	];
+	private $sourceParams = [
+		'betaseries' => [],
+		'addicted' => []
+	];
 
 	public function __construct($argv) {
 		$this->pathSearch = (!empty($argv["path"]) ? $argv["path"] : "");
@@ -57,6 +66,15 @@ class getFileSubtitle {
 		$this->dateCheck = (!empty($argv["date"]) ? $argv["date"] : "");
 		$this->addPrefix = (!empty($argv["prefix"]) ? $argv["prefix"] : "");
 		$this->addSuffix = (!empty($argv["suffix"]) ? $argv["suffix"] : "");
+		
+		foreach ($argv as $key => $value) {
+			foreach ($this->availableSources as $source) {
+				$sourcePrefix = $source.'_';
+				if (preg_match('#^'.$sourcePrefix.'#', $key)) {
+					$this->sourceParams[$source][str_replace($sourcePrefix, '', $key)] = $value;
+				}
+			}
+		}
 
 		if (isset($argv["f"]) || isset($argv["createFolder"])) $this->createFolder=true;
 		if (isset($argv["d"]) || isset($argv["forceDownload"])) $this->forceDownload=true;
@@ -173,19 +191,24 @@ class getFileSubtitle {
 	public function findSubtitle() {
 		if (count($this->fileToCheck)>0) {
 			foreach($this->fileToCheck as $k => $f) {
-				$addicted = new addictedSubtitle($f, $this->forceDownload, $this->subLng);
-				if ($addicted->findEpisode()) {
-					if ($this->emailSend!="" && (($this->emailSerie!="" && strtolower($f->serie)==strtolower($this->emailSerie)) || $this->emailSerie=="")) {
-						sendEmail($this->emailSend, $f->getSimpleName(1), $f->info["filename"], $this->pathSearch);
+				foreach ($this->availableSources as $source) {
+					$name = $source.'Subtitle';
+					$sourceObject = new $name($this->sourceParams[$source], $f, $this->forceDownload, $this->subLng);
+					if (!$sourceObject->isConnected()) continue;
+					if ($sourceObject->findEpisode()) {
+						if ($this->emailSend!="" && (($this->emailSerie!="" && strtolower($f->serie)==strtolower($this->emailSerie)) || $this->emailSerie=="")) {
+							sendEmail($this->emailSend, $f->getSimpleName(1), $f->info["filename"], $this->pathSearch);
+						}
+						if ($this->pathMove!="") {
+							$this->relocateEpisode($f);
+						}
+						else { $this->renameSubtitle($f); }
+						echo $f->getSimpleName(1)." : Un sous-titre a été trouvé avec ".$source."\n";
+						break;
 					}
-					if ($this->pathMove!="") {
-						$this->relocateEpisode($f);
+					else {
+						echo $f->getSimpleName(1)." : Aucun sous-titre trouvé avec ".$source."\n";
 					}
-					else { $this->renameSubtitle($f); }
-					echo $f->getSimpleName(1)." : Un sous-titre a été trouvé\n";
-				}
-				else {
-					echo $f->getSimpleName(1)." : Aucun sous-titre trouvé\n";
 				}
 			}
 		}
@@ -290,6 +313,9 @@ class fileData {
 		else if ($type==3) {
 			return $this->serie." S".$this->saison." E".$this->episode;
 		}
+		else if ($type==4) {
+			return "S".$this->saison." E".$this->episode;
+		}
 	}
 
 	public function isValid() {
@@ -307,14 +333,20 @@ class sourceSubtitle {
 	public $search;
 	public $forceExistant;
 	public $tabLng;
+	public $params;
 
-	public function __construct($search, $force = false, $lng = "fr") {
+	public function __construct($params, $search, $force = false, $lng = "fr") {
+		$this->params = $params;
 		$this->search = $search;
 		$this->forceExistant = $force;
 		$this->lng = $lng;
 	}
 
-	protected function getDataFromLink($link) {
+	public function isConnected() {
+		return false;
+	}
+
+	protected function getDataFromLink($link, $headers = []) {
 		$cache = Cache::get($link);
 		$this->referer = $this->base.$link;
 		if ($cache) return $cache;
@@ -323,7 +355,9 @@ class sourceSubtitle {
 		while($return==false && $cpt<3) {
 			$curl = curl_init();
 			curl_setopt($curl, CURLOPT_URL, $this->base.$link);
-			//curl_setopt($curl, CURLOPT_HEADER, true);
+			if (!empty($headers)) {
+				curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+			}
 			curl_setopt($curl, CURLOPT_COOKIESESSION, true);
 			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($curl, CURLOPT_TIMEOUT, 240);
@@ -344,8 +378,93 @@ class sourceSubtitle {
 	public function findSubtitle($link) {
 
 	}
-	public function saveSubtitle($lien) {
+	
+	public function saveSubtitle($link) {
+		$soustitre = $this->getDataFromLink($link);
+		if ($soustitre!="" && !preg_match("#<!DOCTYPE#", $soustitre)) {
+			$fp = fopen($this->subtitleName(), "a+");
+			fwrite($fp, $soustitre);
+			fclose($fp);
+			return true;
+		}
+		return false;
+	}
 
+	public function subtitleName() {
+		return $this->search->info["dirname"]."/".$this->search->info["filename"].".srt";
+	}
+
+}
+
+
+/**
+ * Source Addic7ed.com
+ */
+class betaseriesSubtitle extends sourceSubtitle {
+	public $base = "https://api.betaseries.com/";
+
+	public function __construct($params, $search, $force = false, $lng = "fr") {
+		parent::__construct($params, $search, $force, $lng);
+		$this->lng = $lng == 'VO' ? 'VO' : 'V'.strtoupper(substr($lng,0,1));
+	}
+
+	public function isConnected() {
+		return isset($this->params['key']);
+	}
+
+	public function findEpisode() {
+		$shows = $this->apiCall('shows/search', ['title' => $this->search->serie]);
+		if (!empty($shows) && !empty($shows->shows)) {
+			$showId = $shows->shows[0]->id;
+			$episode = $this->apiCall('episodes/search', [
+				'show_id' => $showId,
+				'number' => $this->search->getSimpleName(4),
+				'subtitles' => 1
+			]);
+			if (!empty($episode->episode) && !empty($episode->episode->subtitles)) {
+				return $this->findSubtitle($episode->episode->subtitles);
+			}			
+		}
+		return false;
+	}
+	
+
+	public function findSubtitle($subtitles) {
+		$completedLink = array();
+		$linkSubtitle="";
+		foreach ($subtitles as $subtitle) {
+			if ($subtitle->language == $this->lng) {
+				if ($this->search->version!="" && strpos($this->search->version, $subtitle->file) !== false) {
+					$linkSubtitle = $subtitle->url;
+				}
+				else {
+					$completedLink[] = $subtitle->url;
+				}
+			}
+		}
+		if ($linkSubtitle=="" && !empty($completedLink)) {
+			$linkSubtitle = $completedLink[0];
+		}
+		if ($linkSubtitle!="") {
+			return $this->saveSubtitle($linkSubtitle);
+		}
+		return false;
+	}
+	
+	protected function apiCall($path, $args) {
+		$url = $this->buildUrl($path, $args);
+		$data = $this->getDataFromLink($url, [
+			'Accept: application/json',
+			'X-BetaSeries-Key: '.$this->params['key']
+		]);
+		return json_decode($data);
+	}
+
+	protected function buildUrl($path, $args) {
+		return $path.'?'.http_build_query(array_merge(
+			['v' => '3.0'],
+			$args
+		));
 	}
 
 }
@@ -357,8 +476,8 @@ class addictedSubtitle extends sourceSubtitle {
 	public $base = "http://www.addic7ed.com/";
 	public $tabLng = array("fr" => 8, "en" => 1, "it" => 7, "de" => 17);
 
-	public function __construct($search, $force = false, $lng = "fr") {
-		parent::__construct($search, $force, $lng);
+	public function __construct($params, $search, $force = false, $lng = "fr") {
+		parent::__construct($params, $search, $force, $lng);
 		// Verifie que la langue saisie existe
 		if (isset($this->tabLng[$this->lng])) {
 			$this->lng = $this->tabLng[$this->lng];
@@ -366,6 +485,10 @@ class addictedSubtitle extends sourceSubtitle {
 		else {
 			$this->lng = 8;
 		}
+	}
+
+	public function isConnected() {
+		return false;
 	}
 
 	public function findEpisode() {
@@ -412,17 +535,6 @@ class addictedSubtitle extends sourceSubtitle {
 		}
 		return false;
 	}
-	public function saveSubtitle($link) {
-		$soustitre = $this->getDataFromLink($link);
-		if ($soustitre!="" && !preg_match("#<!DOCTYPE#", $soustitre)) {
-			$fp = fopen($this->search->info["dirname"]."/".$this->search->info["filename"].".srt", "a+");
-			fwrite($fp, $soustitre);
-			fclose($fp);
-			return true;
-		}
-		return false;
-	}
-
 
 }
 
