@@ -348,13 +348,14 @@ class sourceSubtitle {
 
 	protected function getDataFromLink($link, $headers = []) {
 		$cache = Cache::get($link);
-		$this->referer = $this->base.$link;
+		$base = (!preg_match('#^http#', $link) ? $this->base : '');
+		$this->referer = $base.$link;
 		if ($cache) return $cache;
 		$cpt = 0;
 		$return = false;
 		while($return==false && $cpt<3) {
 			$curl = curl_init();
-			curl_setopt($curl, CURLOPT_URL, $this->base.$link);
+			curl_setopt($curl, CURLOPT_URL, $base.$link);
 			if (!empty($headers)) {
 				curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 			}
@@ -365,11 +366,35 @@ class sourceSubtitle {
 			curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 			if ($this->referer!="") curl_setopt($curl, CURLOPT_REFERER, $this->referer);
 			$return = curl_exec($curl);
+			$info = curl_getinfo($curl);
+			if (isset($info['content_type']) && $info['content_type'] == 'application/zip') {
+				$originalName = basename($info['url']);
+				file_put_contents($originalName, $return);
+				$return = $this->extractZip($originalName);
+			}
 			curl_close($curl);
 			$cpt++;
 		}
 		Cache::set($link, $return);
 		return $return;
+	}
+
+	protected function extractZip($file, $extractFolder = false) {
+		$zip = new ZipArchive;
+        if ($zip->open($file) === true) {
+			$folder = $extractFolder ? $extractFolder :'./'.pathinfo($file, PATHINFO_FILENAME);
+			mkdir($folder);
+			$zip->extractTo($folder);
+			$zip->close();
+			$files = glob($folder.'/*.srt');
+			if (!empty($files)) {
+				$output = file_get_contents($files[0]);
+			}
+			unlink($file);
+			rmdir_recursive($folder);
+			return $output;
+		}
+		return false;
 	}
 
 	public function findEpisode() {
@@ -418,7 +443,7 @@ class betaseriesSubtitle extends sourceSubtitle {
 			$showId = $shows->shows[0]->id;
 			$episode = $this->apiCall('episodes/search', [
 				'show_id' => $showId,
-				'number' => $this->search->getSimpleName(4),
+				'number' => str_replace(' ', '', $this->search->getSimpleName(4)),
 				'subtitles' => 1
 			]);
 			if (!empty($episode->episode) && !empty($episode->episode->subtitles)) {
@@ -445,7 +470,7 @@ class betaseriesSubtitle extends sourceSubtitle {
 		if ($linkSubtitle=="" && !empty($completedLink)) {
 			$linkSubtitle = $completedLink[0];
 		}
-		if ($linkSubtitle!="") {
+		if (!empty($linkSubtitle)) {
 			return $this->saveSubtitle($linkSubtitle);
 		}
 		return false;
@@ -530,7 +555,7 @@ class addictedSubtitle extends sourceSubtitle {
 		if ($linkSubtitle=="" && !empty($completedLink)) {
 			$linkSubtitle = $completedLink[0];
 		}
-		if ($linkSubtitle!="") {
+		if (!empty($linkSubtitle)) {
 			return $this->saveSubtitle($linkSubtitle);
 		}
 		return false;
